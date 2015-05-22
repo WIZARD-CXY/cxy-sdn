@@ -1,11 +1,11 @@
 package server
 
 import (
+	"github.com/WIZARD-CXY/cxy-sdn/util"
+	_ "github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"net/http"
 )
-
-const API_VERSION = "/v0.1"
 
 type srvErr struct {
 	code    int
@@ -53,14 +53,14 @@ func createRouter(d *Daemon) *mux.Router {
 	for method, routes := range m {
 		for uri, Func := range routes {
 			handler := appHandler{d, Func}
-			r.Path(API_VERSION + uri).Methods(method).Handler(handler)
+			r.Path(uri).Methods(method).Handler(handler)
 		}
 	}
 	return r
 }
 
 func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *srvErr {
-	w.Write([]byte(API_VERSION))
+	w.Write([]byte(util.VERSION))
 
 	return nil
 }

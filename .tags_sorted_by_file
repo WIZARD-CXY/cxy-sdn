@@ -1,0 +1,28 @@
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+init	main.go	/^func init() {$/;"	f
+main	main.go	/^func main() {$/;"	f
+main	main.go	/^package main$/;"	p
+API_VERSION	server/api.go	/^const API_VERSION = "\/v0.1"$/;"	c
+BridgeConf	server/api.go	/^type BridgeConf struct {$/;"	t
+HttpApiFunc	server/api.go	/^type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *srvErr$/;"	t
+ServeAPI	server/api.go	/^func ServeAPI(d *Daemon) {$/;"	f
+ServeHTTP	server/api.go	/^func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {$/;"	f
+appHandler	server/api.go	/^type appHandler struct {$/;"	t
+createRouter	server/api.go	/^func createRouter(d *Daemon) *mux.Router {$/;"	f
+getVersion	server/api.go	/^func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *srvErr {$/;"	f
+server	server/api.go	/^package server$/;"	p
+srvErr	server/api.go	/^type srvErr struct {$/;"	t
+Daemon	server/daemon.go	/^type Daemon struct {$/;"	t
+NewDaemon	server/daemon.go	/^func NewDaemon() *Daemon {$/;"	f
+Run	server/daemon.go	/^func (d *Daemon) Run(ctx *cli.Context) {$/;"	f
+server	server/daemon.go	/^package server$/;"	p
+Daemon	util/conf.go	/^var Daemon DaemonCfg$/;"	v
+DaemonCfg	util/conf.go	/^type DaemonCfg struct {$/;"	t
+config	util/conf.go	/^type config struct {$/;"	t
+spConfig	util/conf.go	/^var spConfig config$/;"	v
+util	util/conf.go	/^package util$/;"	p

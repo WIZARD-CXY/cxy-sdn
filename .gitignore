@@ -14,3 +14,7 @@ _book
 *.epub
 *.mobi
 *.pdf
+
+#tags file
+.tags
+.tags_sort_by_file
