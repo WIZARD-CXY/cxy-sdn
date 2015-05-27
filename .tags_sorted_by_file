@@ -7,22 +7,119 @@
 init	main.go	/^func init() {$/;"	f
 main	main.go	/^func main() {$/;"	f
 main	main.go	/^package main$/;"	p
-API_VERSION	server/api.go	/^const API_VERSION = "\/v0.1"$/;"	c
 BridgeConf	server/api.go	/^type BridgeConf struct {$/;"	t
-HttpApiFunc	server/api.go	/^type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *srvErr$/;"	t
+Connection	server/api.go	/^type Connection struct {$/;"	t
+Err	server/api.go	/^type Err struct {$/;"	t
+Handler	server/api.go	/^type Handler struct {$/;"	t
+HttpApiFunc	server/api.go	/^type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *Err$/;"	t
 ServeAPI	server/api.go	/^func ServeAPI(d *Daemon) {$/;"	f
-ServeHTTP	server/api.go	/^func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {$/;"	f
-appHandler	server/api.go	/^type appHandler struct {$/;"	t
+ServeHTTP	server/api.go	/^func (handler Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {$/;"	f
 createRouter	server/api.go	/^func createRouter(d *Daemon) *mux.Router {$/;"	f
-getVersion	server/api.go	/^func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *srvErr {$/;"	f
+getConf	server/api.go	/^func getConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {$/;"	f
+getCons	server/api.go	/^func getCons(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {$/;"	f
+getNets	server/api.go	/^func getNets(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {$/;"	f
+getVersion	server/api.go	/^func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {$/;"	f
 server	server/api.go	/^package server$/;"	p
-srvErr	server/api.go	/^type srvErr struct {$/;"	t
+setConf	server/api.go	/^func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {$/;"	f
+TestClusterBind	server/api_test.go	/^func TestClusterBind(t *testing.T) {$/;"	f
+TestClusterBindBadIface	server/api_test.go	/^func TestClusterBindBadIface(t *testing.T) {$/;"	f
+TestClusterBindBadParams	server/api_test.go	/^func TestClusterBindBadParams(t *testing.T) {$/;"	f
+TestClusterBindBadParams2	server/api_test.go	/^func TestClusterBindBadParams2(t *testing.T) {$/;"	f
+TestClusterBindNoParams	server/api_test.go	/^func TestClusterBindNoParams(t *testing.T) {$/;"	f
+TestClusterJoin	server/api_test.go	/^func TestClusterJoin(t *testing.T) {$/;"	f
+TestClusterJoinBadParams	server/api_test.go	/^func TestClusterJoinBadParams(t *testing.T) {$/;"	f
+TestClusterJoinBadParams2	server/api_test.go	/^func TestClusterJoinBadParams2(t *testing.T) {$/;"	f
+TestClusterJoinNoParams	server/api_test.go	/^func TestClusterJoinNoParams(t *testing.T) {$/;"	f
+TestClusterJoiniBadIp	server/api_test.go	/^func TestClusterJoiniBadIp(t *testing.T) {$/;"	f
+TestClusterLeave	server/api_test.go	/^func TestClusterLeave(t *testing.T) {$/;"	f
+TestCreateConnection	server/api_test.go	/^func TestCreateConnection(t *testing.T) {$/;"	f
+TestCreateConnectionBadBody	server/api_test.go	/^func TestCreateConnectionBadBody(t *testing.T) {$/;"	f
+TestCreateConnectionNoBody	server/api_test.go	/^func TestCreateConnectionNoBody(t *testing.T) {$/;"	f
+TestCreateConnectionNoNetwork	server/api_test.go	/^func TestCreateConnectionNoNetwork(t *testing.T) {$/;"	f
+TestDeleteConnection	server/api_test.go	/^func TestDeleteConnection(t *testing.T) {$/;"	f
+TestDeleteConnectionNonExistent	server/api_test.go	/^func TestDeleteConnectionNonExistent(t *testing.T) {$/;"	f
+TestDeleteNetworkNonExistentApi	server/api_test.go	/^func TestDeleteNetworkNonExistentApi(t *testing.T) {$/;"	f
+TestDeleteNetworksApi	server/api_test.go	/^func TestDeleteNetworksApi(t *testing.T) {$/;"	f
+TestGetConfiguration	server/api_test.go	/^func TestGetConfiguration(t *testing.T) {$/;"	f
+TestGetConfigurationEmpty	server/api_test.go	/^func TestGetConfigurationEmpty(t *testing.T) {$/;"	f
+TestGetConnection	server/api_test.go	/^func TestGetConnection(t *testing.T) {$/;"	f
+TestGetConnectionNonExistent	server/api_test.go	/^func TestGetConnectionNonExistent(t *testing.T) {$/;"	f
+TestGetConnections	server/api_test.go	/^func TestGetConnections(t *testing.T) {$/;"	f
+TestGetNetworkApi	server/api_test.go	/^func TestGetNetworkApi(t *testing.T) {$/;"	f
+TestGetNetworkNonExistentApi	server/api_test.go	/^func TestGetNetworkNonExistentApi(t *testing.T) {$/;"	f
+TestGetNetworksApi	server/api_test.go	/^func TestGetNetworksApi(t *testing.T) {$/;"	f
+TestSetConfiguration	server/api_test.go	/^func TestSetConfiguration(t *testing.T) {$/;"	f
+TestSetConfigurationBadBody	server/api_test.go	/^func TestSetConfigurationBadBody(t *testing.T) {$/;"	f
+TestSetConfigurationNoBody	server/api_test.go	/^func TestSetConfigurationNoBody(t *testing.T) {$/;"	f
+TestSetNetworksApi	server/api_test.go	/^func TestSetNetworksApi(t *testing.T) {$/;"	f
+server	server/api_test.go	/^package server$/;"	p
 Daemon	server/daemon.go	/^type Daemon struct {$/;"	t
 NewDaemon	server/daemon.go	/^func NewDaemon() *Daemon {$/;"	f
 Run	server/daemon.go	/^func (d *Daemon) Run(ctx *cli.Context) {$/;"	f
 server	server/daemon.go	/^package server$/;"	p
-Daemon	util/conf.go	/^var Daemon DaemonCfg$/;"	v
-DaemonCfg	util/conf.go	/^type DaemonCfg struct {$/;"	t
-config	util/conf.go	/^type config struct {$/;"	t
-spConfig	util/conf.go	/^var spConfig config$/;"	v
+CreateDefaultNetwork	server/network.go	/^func CreateDefaultNetwork() (*Network, error) {$/;"	f
+CreateNetwork	server/network.go	/^func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {$/;"	f
+GetAvailableSubnet	server/network.go	/^func GetAvailableSubnet() (subnet *net.IPNet, err error) {$/;"	f
+GetNetwork	server/network.go	/^func GetNetwork(name string) (*Network, error) {$/;"	f
+GetNetworks	server/network.go	/^func GetNetworks() ([]Network, error) {$/;"	f
+Network	server/network.go	/^type Network struct {$/;"	t
+allocateVlan	server/network.go	/^func allocateVlan() (uint, error) {$/;"	f
+defaultNetwork	server/network.go	/^const defaultNetwork = "default"$/;"	c
+gatewayAddrs	server/network.go	/^var gatewayAddrs = []string{$/;"	v
+networkStore	server/network.go	/^const networkStore = "network"$/;"	c
+server	server/network.go	/^package server$/;"	p
+vlanCount	server/network.go	/^const vlanCount = 4096$/;"	c
+vlanStore	server/network.go	/^const vlanStore = "vlan"$/;"	c
+TestGetEmptyNetworks	server/network_test.go	/^func TestGetEmptyNetworks(t *testing.T) {$/;"	f
+TestGetNetwork	server/network_test.go	/^func TestGetNetwork(t *testing.T) {$/;"	f
+TestGetNetworks	server/network_test.go	/^func TestGetNetworks(t *testing.T) {$/;"	f
+TestNetworkCleanup	server/network_test.go	/^func TestNetworkCleanup(t *testing.T) {$/;"	f
+TestNetworkCreate	server/network_test.go	/^func TestNetworkCreate(t *testing.T) {$/;"	f
+TestNetworkInit	server/network_test.go	/^func TestNetworkInit(t *testing.T) {$/;"	f
+server	server/network_test.go	/^package server$/;"	p
+subnetArray	server/network_test.go	/^var subnetArray []*net.IPNet$/;"	v
+VERSION	util/conf.go	/^var VERSION = "0.1"$/;"	v
 util	util/conf.go	/^package util$/;"	p
+ChangeInterfaceName	util/util.go	/^func ChangeInterfaceName(old, newName string) error {$/;"	f
+CheckRouteOverlaps	util/util.go	/^func CheckRouteOverlaps(toCheck *net.IPNet) error {$/;"	f
+ErrNetworkOverlaps	util/util.go	/^	ErrNetworkOverlapsWithNameservers = errors.New("requested network overlaps with nameserver")$/;"	v
+ErrNetworkOverlapsWithNameservers	util/util.go	/^	ErrNoDefaultRoute                 = errors.New("no default route")$/;"	v
+ErrNoDefaultRoute	util/util.go	/^var ($/;"	v
+GetDefaultRouteIface	util/util.go	/^func GetDefaultRouteIface() (int, error) {$/;"	f
+GetIfaceAddr	util/util.go	/^func GetIfaceAddr(name string) (*net.IPNet, error) {$/;"	f
+GetIfaceForRoute	util/util.go	/^func GetIfaceForRoute(address string) (string, error) {$/;"	f
+InterfaceDown	util/util.go	/^func InterfaceDown(name string) error {$/;"	f
+InterfaceUp	util/util.go	/^func InterfaceUp(name string) error {$/;"	f
+NetworkOverlaps	util/util.go	/^func NetworkOverlaps(netX *net.IPNet, netY *net.IPNet) bool {$/;"	f
+NetworkRange	util/util.go	/^func NetworkRange(network *net.IPNet) (net.IP, net.IP) {$/;"	f
+NetworkSize	util/util.go	/^func NetworkSize(mask net.IPMask) int32 {$/;"	f
+SetDefaultGateway	util/util.go	/^func SetDefaultGateway(ip, ifaceName string) error {$/;"	f
+SetInterfaceInNamespaceFd	util/util.go	/^func SetInterfaceInNamespaceFd(name string, fd uintptr) error {$/;"	f
+SetInterfaceInNamespacePid	util/util.go	/^func SetInterfaceInNamespacePid(name string, nsPid int) error {$/;"	f
+SetInterfaceIp	util/util.go	/^func SetInterfaceIp(name string, rawIp string) error {$/;"	f
+SetInterfaceMac	util/util.go	/^func SetInterfaceMac(name string, macaddr string) error {$/;"	f
+SetMtu	util/util.go	/^func SetMtu(name string, mtu int) error {$/;"	f
+TestAndSet	util/util.go	/^func TestAndSet(a []byte) uint {$/;"	f
+clear	util/util.go	/^func clear(a []byte, k uint) {$/;"	f
+set	util/util.go	/^func set(a []byte, k uint) {$/;"	f
+test	util/util.go	/^func test(a []byte, k uint) bool {$/;"	f
+util	util/util.go	/^package util$/;"	p
+TestBitsOperation	util/util_test.go	/^func TestBitsOperation(t *testing.T) {$/;"	f
+TestChangeInterfaceName	util/util_test.go	/^func TestChangeInterfaceName(t *testing.T) {$/;"	f
+TestCheckRouteOverlaps	util/util_test.go	/^func TestCheckRouteOverlaps(t *testing.T) {$/;"	f
+TestGetDefaultRouteIface	util/util_test.go	/^func TestGetDefaultRouteIface(t *testing.T) {$/;"	f
+TestGetIfaceForRoute	util/util_test.go	/^func TestGetIfaceForRoute(t *testing.T) {$/;"	f
+TestInterfaceUpDown	util/util_test.go	/^func TestInterfaceUpDown(t *testing.T) {$/;"	f
+TestNetworkOverlaps	util/util_test.go	/^func TestNetworkOverlaps(t *testing.T) {$/;"	f
+TestNetworkRange	util/util_test.go	/^func TestNetworkRange(t *testing.T) {$/;"	f
+TestNetworkSize	util/util_test.go	/^func TestNetworkSize(t *testing.T) {$/;"	f
+TestSetDefaultGateway	util/util_test.go	/^func TestSetDefaultGateway(t *testing.T) {$/;"	f
+TestSetGetInterfaceIp	util/util_test.go	/^func TestSetGetInterfaceIp(t *testing.T) {$/;"	f
+TestSetInterfaceInNamespaceFd	util/util_test.go	/^func TestSetInterfaceInNamespaceFd(t *testing.T) {$/;"	f
+TestSetInterfaceInNamespacePid	util/util_test.go	/^func TestSetInterfaceInNamespacePid(t *testing.T) {$/;"	f
+TestSetInterfaceMac	util/util_test.go	/^func TestSetInterfaceMac(t *testing.T) {$/;"	f
+TestSetMtu	util/util_test.go	/^func TestSetMtu(t *testing.T) {$/;"	f
+setUp	util/util_test.go	/^func setUp(t *testing.T) tearDown {$/;"	f
+tearDown	util/util_test.go	/^type tearDown func()$/;"	t
+testIface	util/util_test.go	/^const testIface = "foo0"$/;"	c
+util	util/util_test.go	/^package util$/;"	p

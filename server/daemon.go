@@ -9,14 +9,16 @@ import (
 )
 
 type Daemon struct {
-	Conf        *BridgeConf
+	bridgeConf  *BridgeConf
 	isBootstrap bool
+	connections map[string]*Connection
 }
 
 func NewDaemon() *Daemon {
 	return &Daemon{
 		&BridgeConf{},
 		false,
+		map[string]*Connection{},
 	}
 }
 func (d *Daemon) Run(ctx *cli.Context) {
@@ -26,10 +28,10 @@ func (d *Daemon) Run(ctx *cli.Context) {
 
 	go ServeAPI(d)
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	sig_chan := make(chan os.Signal, 1)
+	signal.Notify(sig_chan, os.Interrupt)
 	go func() {
-		for _ = range c {
+		for _ = range sig_chan {
 			// TODO clean up work
 			os.Exit(0)
 		}
