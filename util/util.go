@@ -223,7 +223,7 @@ func set(a []byte, k uint) {
 }
 
 // clear the given bit, 0 index based
-func clear(a []byte, k uint) {
+func Clear(a []byte, k uint) {
 	a[k/8] &= ^(1 << (k % 8))
 }
 

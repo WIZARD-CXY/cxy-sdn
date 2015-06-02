@@ -134,7 +134,7 @@ func GetAvailableSubnet() (subnet *net.IPNet, err error) {
 // ipStore manage the cluster ip resource
 // key is the subnet, value is the available ip address
 
-// Get an IP from the subnet
+// Get an IP from the subnet and mark it as used
 func RequestIP(subnet net.IPNet) net.IP {
 	ipCount := util.IPCount(subnet)
 	bc := int(ipCount / 8)
@@ -144,35 +144,29 @@ func RequestIP(subnet net.IPNet) net.IP {
 		bc += 1
 	}
 
-	addrArray, _, ok := netAgent.Get(ipStore, subnet.String())
+	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
 
 	if !ok {
-		addrArray = make([]byte, bc)
+		oldArray = make([]byte, bc)
 	}
 
-	newArray := make([]byte, len(addrArray))
+	newArray := make([]byte, len(oldArray))
 
 	copy(newArray, addrArray)
 
-	pos := util.TestAndSet(addrArray)
+	pos := util.TestAndSet(newArray)
 
-	err := netAgent.Put(ipStore, subnet.String(), addrArray, newArray)
+	err := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
 
 	if err == netAgent.OUTDATED {
 		return RequestIP(subnet)
 	}
 
-	return getIP(subnet, pos)
-
-}
-
-// this function is used to find the first unused ip in the given subnet
-func getIP(subnet net.IPNet, pos int) (net.IP, error) {
 	var num uint32
 
 	buf := bytes.NewBuffer(subnet.IP)
 
-	err := binary.Read(buf, binary.BigEndian, &num)
+	err = binary.Read(buf, binary.BigEndian, &num)
 
 	if err != nil {
 		return nil, err
@@ -190,14 +184,34 @@ func getIP(subnet net.IPNet, pos int) (net.IP, error) {
 
 }
 
+// Release the given IP from the subnet
 func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
-	addrArray, _, ok := netAgent.Get(ipStore, subnet.String)
+	oldArray, _, ok := netAgent.Get(ipStore, subnet.String)
 
 	if !ok {
 		return false
 	}
 
-	currVal := make([]byte, len(addrArray))
-	copy(currVal, addrArray)
+	newArray := make([]byte, len(oldArray))
+	copy(newArray, oldArray)
 
+	var num1, num2 int
+	buf1 := bytes.NewBuffer(oldArray)
+	err := binary.Read(buf1, binary.BigEndian, &num1)
+
+	buf := bytes.NewBuffer(subnet.IP)
+
+	err = binary.Read(buf, binary.BigEndian, &num2)
+
+	pos = num1 - num2
+
+	util.Clear(newArray, pos-1)
+
+	err = netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
+
+	if err == netAgent.OUTDATED {
+		return ReleaseIP(addr, subnet)
+	}
+
+	return true
 }
