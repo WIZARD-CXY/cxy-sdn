@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
@@ -11,25 +12,10 @@ import (
 
 const networkStore = "network"
 const vlanStore = "vlan"
+const ipStore = "ip"
 const defaultNetwork = "default"
 
 const vlanCount = 4096
-
-// borrow from docker
-var gatewayAddrs = []string{
-	"10.1.42.1/16",
-	"10.42.42.1/16",
-	"172.16.42.1/24",
-	"172.16.43.1/24",
-	"172.16.44.1/24",
-	"10.0.42.1/24",
-	"10.0.43.1/24",
-	"172.17.42.1/16",
-	"10.0.42.1/16",
-	"192.168.42.1/24",
-	"192.168.43.1/24",
-	"192.168.44.1/24",
-}
 
 type Network struct {
 	Name    string `json:"name"`
@@ -143,4 +129,75 @@ func GetAvailableSubnet() (subnet *net.IPNet, err error) {
 	}
 
 	return &net.IPNet{}, errors.New("No available GW address")
+}
+
+// ipStore manage the cluster ip resource
+// key is the subnet, value is the available ip address
+
+// Get an IP from the subnet
+func RequestIP(subnet net.IPNet) net.IP {
+	ipCount := util.IPCount(subnet)
+	bc := int(ipCount / 8)
+	partial := int(math.Mod(ipCount, float64(8)))
+
+	if partial != 0 {
+		bc += 1
+	}
+
+	addrArray, _, ok := netAgent.Get(ipStore, subnet.String())
+
+	if !ok {
+		addrArray = make([]byte, bc)
+	}
+
+	newArray := make([]byte, len(addrArray))
+
+	copy(newArray, addrArray)
+
+	pos := util.TestAndSet(addrArray)
+
+	err := netAgent.Put(ipStore, subnet.String(), addrArray, newArray)
+
+	if err == netAgent.OUTDATED {
+		return RequestIP(subnet)
+	}
+
+	return getIP(subnet, pos)
+
+}
+
+// this function is used to find the first unused ip in the given subnet
+func getIP(subnet net.IPNet, pos int) (net.IP, error) {
+	var num uint32
+
+	buf := bytes.NewBuffer(subnet.IP)
+
+	err := binary.Read(buf, binary.BigEndian, &num)
+
+	if err != nil {
+		return nil, err
+	}
+
+	num += pos
+
+	buf2 := new(bytes.Buffer)
+	err = binary.Write(buf2, binary.BigEndian, num)
+
+	if err != nil {
+		return nil, err
+	}
+	return net.IP(buf2.Bytes())
+
+}
+
+func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
+	addrArray, _, ok := netAgent.Get(ipStore, subnet.String)
+
+	if !ok {
+		return false
+	}
+
+	currVal := make([]byte, len(addrArray))
+	copy(currVal, addrArray)
+
 }

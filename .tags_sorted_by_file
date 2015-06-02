@@ -65,7 +65,6 @@ GetNetworks	server/network.go	/^func GetNetworks() ([]Network, error) {$/;"	f
 Network	server/network.go	/^type Network struct {$/;"	t
 allocateVlan	server/network.go	/^func allocateVlan() (uint, error) {$/;"	f
 defaultNetwork	server/network.go	/^const defaultNetwork = "default"$/;"	c
-gatewayAddrs	server/network.go	/^var gatewayAddrs = []string{$/;"	v
 networkStore	server/network.go	/^const networkStore = "network"$/;"	c
 server	server/network.go	/^package server$/;"	p
 vlanCount	server/network.go	/^const vlanCount = 4096$/;"	c
@@ -78,6 +77,66 @@ TestNetworkCreate	server/network_test.go	/^func TestNetworkCreate(t *testing.T) 
 TestNetworkInit	server/network_test.go	/^func TestNetworkInit(t *testing.T) {$/;"	f
 server	server/network_test.go	/^package server$/;"	p
 subnetArray	server/network_test.go	/^var subnetArray []*net.IPNet$/;"	v
+AddConnection	server/ovs.go	/^func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {$/;"	f
+AddPeer	server/ovs.go	/^func AddPeer(peerIp string) error {$/;"	f
+Bridge	server/ovs.go	/^type Bridge struct {$/;"	t
+ConnectionAdd	server/ovs.go	/^const ($/;"	c
+ConnectionContext	server/ovs.go	/^type ConnectionContext struct {$/;"	t
+ConnectionDelete	server/ovs.go	/^	ConnectionUpdate = iota$/;"	c
+ConnectionRPCHandler	server/ovs.go	/^func ConnectionRPCHandler(d *Daemon) {$/;"	f
+ConnectionUpdate	server/ovs.go	/^	ConnectionAdd    = iota$/;"	c
+ContextCache	server/ovs.go	/^var ContextCache map[string]string$/;"	v
+CreateBridge	server/ovs.go	/^func CreateBridge() error {$/;"	f
+DeleteConnection	server/ovs.go	/^func DeleteConnection(connection OvsConnection) error {$/;"	f
+DeletePeer	server/ovs.go	/^func DeletePeer(peerIp string) error {$/;"	f
+Disconnected	server/ovs.go	/^func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {$/;"	f
+Echo	server/ovs.go	/^func (n notifier) Echo([]interface{}) {$/;"	f
+GenerateRandomName	server/ovs.go	/^func GenerateRandomName(prefix string, size int) (string, error) {$/;"	f
+GetAvailableGwAddress	server/ovs.go	/^func GetAvailableGwAddress(bridgeIP string) (gwaddr string, err error) {$/;"	f
+GetAvailableSubnet	server/ovs.go	/^func GetAvailableSubnet() (subnet *net.IPNet, err error) {$/;"	f
+Locked	server/ovs.go	/^func (n notifier) Locked([]interface{}) {$/;"	f
+OvsBridge	server/ovs.go	/^var OvsBridge Bridge = Bridge{Name: defaultBridgeName}$/;"	v
+OvsConnection	server/ovs.go	/^type OvsConnection struct {$/;"	t
+OvsInit	server/ovs.go	/^func OvsInit() {$/;"	f
+Stolen	server/ovs.go	/^func (n notifier) Stolen([]interface{}) {$/;"	f
+Update	server/ovs.go	/^func (n notifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {$/;"	f
+UpdateConnectionContext	server/ovs.go	/^func UpdateConnectionContext(ovsPort string, key string, context string) error {$/;"	f
+createBridgeIface	server/ovs.go	/^func createBridgeIface(name string) error {$/;"	f
+createOvsInternalPort	server/ovs.go	/^func createOvsInternalPort(prefix string, bridge string, tag uint) (port string, err error) {$/;"	f
+defaultBridgeName	server/ovs.go	/^const defaultBridgeName = "ovs-br"$/;"	c
+gatewayAddrs	server/ovs.go	/^var gatewayAddrs = []string{$/;"	v
+generateMacAddr	server/ovs.go	/^func generateMacAddr(ip net.IP) net.HardwareAddr {$/;"	f
+installRule	server/ovs.go	/^func installRule(args ...string) ([]byte, error) {$/;"	f
+mtu	server/ovs.go	/^const mtu = 1440$/;"	c
+notifier	server/ovs.go	/^type notifier struct {$/;"	t
+ovs	server/ovs.go	/^var ovs *libovsdb.OvsdbClient$/;"	v
+populateContextCache	server/ovs.go	/^func populateContextCache() {$/;"	f
+server	server/ovs.go	/^package server$/;"	p
+setupIPTables	server/ovs.go	/^func setupIPTables(bridgeName string, bridgeIP string) error {$/;"	f
+AddInternalPort	server/ovs_driver.go	/^func AddInternalPort(ovs *libovsdb.OvsdbClient, bridgeName string, portName string, tag uint) error {$/;"	f
+CONTEXT_KEY	server/ovs_driver.go	/^const CONTEXT_KEY = "container_id"$/;"	c
+CONTEXT_VALUE	server/ovs_driver.go	/^const CONTEXT_VALUE = "container_data"$/;"	c
+CreateOVSBridge	server/ovs_driver.go	/^func CreateOVSBridge(ovs *libovsdb.OvsdbClient, bridgeName string) error {$/;"	f
+Disconnected	server/ovs_driver.go	/^func (n Notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {$/;"	f
+Echo	server/ovs_driver.go	/^func (n Notifier) Echo([]interface{}) {$/;"	f
+GetTableCache	server/ovs_driver.go	/^func GetTableCache(tableName string) map[string]libovsdb.Row {$/;"	f
+Locked	server/ovs_driver.go	/^func (n Notifier) Locked([]interface{}) {$/;"	f
+Notifier	server/ovs_driver.go	/^type Notifier struct {$/;"	t
+Stolen	server/ovs_driver.go	/^func (n Notifier) Stolen([]interface{}) {$/;"	f
+Update	server/ovs_driver.go	/^func (n Notifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {$/;"	f
+UpdatePortContext	server/ovs_driver.go	/^func UpdatePortContext(ovs *libovsdb.OvsdbClient, portName string, key string, context string) error {$/;"	f
+addVxlanPort	server/ovs_driver.go	/^func addVxlanPort(ovs *libovsdb.OvsdbClient, bridgeName string, portName string, peerAddress string) {$/;"	f
+cache	server/ovs_driver.go	/^var cache map[string]map[string]libovsdb.Row$/;"	v
+deletePort	server/ovs_driver.go	/^func deletePort(ovs *libovsdb.OvsdbClient, bridgeName string, portName string) {$/;"	f
+getRootUuid	server/ovs_driver.go	/^func getRootUuid() string {$/;"	f
+monitorDockerBridge	server/ovs_driver.go	/^func monitorDockerBridge(ovs *libovsdb.OvsdbClient) {$/;"	f
+ovs_connect	server/ovs_driver.go	/^func ovs_connect() (*libovsdb.OvsdbClient, error) {$/;"	f
+populateCache	server/ovs_driver.go	/^func populateCache(updates libovsdb.TableUpdates) {$/;"	f
+portExists	server/ovs_driver.go	/^func portExists(ovs *libovsdb.OvsdbClient, portName string) (bool, error) {$/;"	f
+portUuidForName	server/ovs_driver.go	/^func portUuidForName(portName string) string {$/;"	f
+quit	server/ovs_driver.go	/^var quit chan bool$/;"	v
+server	server/ovs_driver.go	/^package server$/;"	p
+update	server/ovs_driver.go	/^var update chan *libovsdb.TableUpdates$/;"	v
 VERSION	util/conf.go	/^var VERSION = "0.1"$/;"	v
 util	util/conf.go	/^package util$/;"	p
 ChangeInterfaceName	util/util.go	/^func ChangeInterfaceName(old, newName string) error {$/;"	f

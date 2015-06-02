@@ -227,7 +227,7 @@ func clear(a []byte, k uint) {
 	a[k/8] &= ^(1 << (k % 8))
 }
 
-// test the given bit is 1, 0 index based
+// test whether the given bit is 1, 0 index based
 func test(a []byte, k uint) bool {
 	return ((a[k/8] & (1 << (k % 8))) != 0)
 }
@@ -245,4 +245,16 @@ func TestAndSet(a []byte) uint {
 		}
 	}
 	return i + 1
+}
+
+// count how many IP available in the given subnet
+func IPCount(subnet net.IPNet) {
+	maskSize, _ := subnet.Mask.Size()
+
+	if addr.IP.To4() != nil {
+		return math.Pow(2, float64(32-maskSize))
+	} else {
+		return math.Pow(2, float64(128-maskSize))
+	}
+
 }
