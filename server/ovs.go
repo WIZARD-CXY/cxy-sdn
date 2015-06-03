@@ -15,33 +15,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/WIZARD-CXY/cxy-sdn/util"
 	"github.com/golang/glog"
 	"github.com/socketplane/libovsdb"
 	"github.com/vishvananda/netns"
 )
-
-// Gateway addresses are from docker/daemon/networkdriver/bridge/driver.go to reflect similar behaviour
-// between this temporary wrapper solution to the native Network integration
-
-var gatewayAddrs = []string{
-	// Here we don't follow the convention of using the 1st IP of the range for the gateway.
-	// This is to use the same gateway IPs as the /24 ranges, which predate the /16 ranges.
-	// In theory this shouldn't matter - in practice there's bound to be a few scripts relying
-	// on the internal addressing or other stupid things like that.
-	// They shouldn't, but hey, let's not break them unless we really have to.
-	"10.1.42.1/16",
-	"10.42.42.1/16",
-	"172.16.42.1/24",
-	"172.16.43.1/24",
-	"172.16.44.1/24",
-	"10.0.42.1/24",
-	"10.0.43.1/24",
-	"172.17.42.1/16", // Don't use 172.16.0.0/16, it conflicts with EC2 DNS 172.16.0.23
-	"10.0.42.1/16",   // Don't even try using the entire /8, that's too intrusive
-	"192.168.42.1/24",
-	"192.168.43.1/24",
-	"192.168.44.1/24",
-}
 
 // Setting a mtu value for tunnel
 const mtu = 1440
@@ -62,52 +40,12 @@ func OvsInit() {
 	var err error
 	ovs, err = ovs_connect()
 	if err != nil {
-		log.Error("Error connecting OVS ", err)
+		glog.Error("Error connecting OVS ", err)
 	} else {
 		ovs.Register(notifier{})
 	}
 	ContextCache = make(map[string]string)
 	populateContextCache()
-}
-
-func GetAvailableGwAddress(bridgeIP string) (gwaddr string, err error) {
-	if len(bridgeIP) != 0 {
-		_, _, err = net.ParseCIDR(bridgeIP)
-		if err != nil {
-			return
-		}
-		gwaddr = bridgeIP
-	} else {
-		for _, addr := range gatewayAddrs {
-			_, dockerNetwork, err := net.ParseCIDR(addr)
-			if err != nil {
-				return "", err
-			}
-			if err = CheckRouteOverlaps(dockerNetwork); err != nil {
-				continue
-			}
-			gwaddr = addr
-			break
-		}
-	}
-	if gwaddr == "" {
-		return "", errors.New("No available gateway addresses")
-	}
-	return gwaddr, nil
-}
-
-func GetAvailableSubnet() (subnet *net.IPNet, err error) {
-	for _, addr := range gatewayAddrs {
-		_, dockerNetwork, err := net.ParseCIDR(addr)
-		if err != nil {
-			return &net.IPNet{}, err
-		}
-		if err = CheckRouteOverlaps(dockerNetwork); err == nil {
-			return dockerNetwork, nil
-		}
-	}
-
-	return &net.IPNet{}, errors.New("No available GW address")
 }
 
 func CreateBridge() error {
@@ -180,7 +118,7 @@ type ConnectionContext struct {
 }
 
 func ConnectionRPCHandler(d *Daemon) {
-	for {
+	/*for {
 		c := <-d.cC
 
 		switch c.Action {
@@ -205,7 +143,7 @@ func ConnectionRPCHandler(d *Daemon) {
 			delete(d.Connections, c.Connection.ContainerID)
 			c.Result <- c.Connection
 		}
-	}
+	}*/
 }
 
 func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {
@@ -222,7 +160,7 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 	}
 
 	if networkName == "" {
-		networkName = DefaultNetworkName
+		networkName = defaultNetwork
 	}
 	fmt.Println("haha network name", networkName)
 
@@ -231,7 +169,7 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 		return ovsConnection, err
 	}
 
-	portName, err := createOvsInternalPort(prefix, bridge, bridgeNetwork.Vlan)
+	portName, err := createOvsInternalPort(prefix, bridge, bridgeNetwork.VlanID)
 	if err != nil {
 		return
 	}
@@ -241,7 +179,7 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 
 	_, subnet, _ := net.ParseCIDR(bridgeNetwork.Subnet)
 
-	ip := IPAMRequest(*subnet)
+	ip := RequestIP(*subnet)
 	fmt.Println("newIP is", ip)
 	mac := generateMacAddr(ip).String()
 
@@ -250,10 +188,10 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 
 	ovsConnection = OvsConnection{portName, ip.String(), subnetPrefix, mac, bridgeNetwork.Gateway}
 
-	if err = SetMtu(portName, mtu); err != nil {
+	if err = util.SetMtu(portName, mtu); err != nil {
 		return
 	}
-	if err = InterfaceUp(portName); err != nil {
+	if err = util.InterfaceUp(portName); err != nil {
 		return
 	}
 
@@ -283,7 +221,7 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 	fmt.Println("haha4")
 	defer targetns.Close()
 
-	if err = SetInterfaceInNamespaceFd(portName, uintptr(int(targetns))); err != nil {
+	if err = util.SetInterfaceInNamespaceFd(portName, uintptr(int(targetns))); err != nil {
 		return
 	}
 	fmt.Println("haha5")
@@ -294,7 +232,7 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 	fmt.Println("haha6")
 	defer netns.Set(origns)
 
-	if err = InterfaceDown(portName); err != nil {
+	if err = util.InterfaceDown(portName); err != nil {
 		return
 	}
 	fmt.Println("haha7")
@@ -303,25 +241,25 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 	   Currently using the Randomly created OVS port as is.
 	   refer to veth.go where one end of the veth pair is renamed to eth0
 	*/
-	if err = ChangeInterfaceName(portName, portName); err != nil {
+	if err = util.ChangeInterfaceName(portName, portName); err != nil {
 		return
 	}
 
-	if err = SetInterfaceIp(portName, ip.String()+subnetPrefix); err != nil {
+	if err = util.SetInterfaceIp(portName, ip.String()+subnetPrefix); err != nil {
 		return
 	}
 
-	if err = SetInterfaceMac(portName, generateMacAddr(ip).String()); err != nil {
+	if err = util.SetInterfaceMac(portName, generateMacAddr(ip).String()); err != nil {
 		return
 	}
 	fmt.Println("haha8")
 
-	if err = InterfaceUp(portName); err != nil {
+	if err = util.InterfaceUp(portName); err != nil {
 		return
 	}
 	fmt.Println("haha9")
 
-	if err = SetDefaultGateway(bridgeNetwork.Gateway, portName); err != nil {
+	if err = util.SetDefaultGateway(bridgeNetwork.Gateway, portName); err != nil {
 		return
 	}
 
@@ -357,7 +295,7 @@ func DeleteConnection(connection OvsConnection) error {
 	deletePort(ovs, OvsBridge.Name, connection.Name)
 	ip := net.ParseIP(connection.Ip)
 	_, subnet, _ := net.ParseCIDR(connection.Ip + connection.Subnet)
-	IPAMRelease(ip, *subnet)
+	ReleaseIP(ip, *subnet)
 	return nil
 }
 
@@ -420,37 +358,37 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		iptables -A FORWARD -o %bridgeName -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 	*/
 
-	log.Debug("Setting up iptables")
+	glog.Infof("Setting up iptables")
 	natArgs := []string{"-t", "nat", "-A", "POSTROUTING", "-s", bridgeIP, "!", "-o", bridgeName, "-j", "MASQUERADE"}
 	output, err := installRule(natArgs...)
 	if err != nil {
-		log.Debugf("Unable to enable network bridge NAT: %s", err)
+		glog.Infof("Unable to enable network bridge NAT: %s", err)
 		return fmt.Errorf("Unable to enable network bridge NAT: %s", err)
 	}
 	if len(output) != 0 {
-		log.Debugf("Error enabling network bridge NAT: %s", err)
+		glog.Errorf("Error enabling network bridge NAT: %s", err)
 		return fmt.Errorf("Error enabling network bridge NAT: %s", output)
 	}
 
 	outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "!", "-o", bridgeName, "-j", "ACCEPT"}
 	output, err = installRule(outboundArgs...)
 	if err != nil {
-		log.Debugf("Unable to enable network outbound forwarding: %s", err)
+		glog.Errorf("Unable to enable network outbound forwarding: %s", err)
 		return fmt.Errorf("Unable to enable network outbound forwarding: %s", err)
 	}
 	if len(output) != 0 {
-		log.Debugf("Error enabling network outbound forwarding: %s", output)
+		glog.Errorf("Error enabling network outbound forwarding: %s", output)
 		return fmt.Errorf("Error enabling network outbound forwarding: %s", output)
 	}
 
 	inboundArgs := []string{"-A", "FORWARD", "-o", bridgeName, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}
 	output, err = installRule(inboundArgs...)
 	if err != nil {
-		log.Debugf("Unable to enable network inbound forwarding: %s", err)
+		glog.Errorf("Unable to enable network inbound forwarding: %s", err)
 		return fmt.Errorf("Unable to enable network inbound forwarding: %s", err)
 	}
 	if len(output) != 0 {
-		log.Debugf("Error enabling network inbound forwarding: %s")
+		glog.Errorf("Error enabling network inbound forwarding: %s")
 		return fmt.Errorf("Error enabling network inbound forwarding: %s", output)
 	}
 	return nil
@@ -474,7 +412,7 @@ type notifier struct {
 }
 
 func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
-	log.Error("OVS Disconnected. Retrying...")
+	glog.Errorf("OVS Disconnected. Retrying...")
 	ovs = nil
 	go OvsInit()
 }

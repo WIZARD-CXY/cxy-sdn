@@ -1,12 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
 	"github.com/WIZARD-CXY/netAgent"
-	"github.com/golang/glog"
+	"math"
 	"net"
 )
 
@@ -14,6 +15,26 @@ const networkStore = "network"
 const vlanStore = "vlan"
 const ipStore = "ip"
 const defaultNetwork = "default"
+
+var gatewayAddrs = []string{
+	// Here we don't follow the convention of using the 1st IP of the range for the gateway.
+	// This is to use the same gateway IPs as the /24 ranges, which predate the /16 ranges.
+	// In theory this shouldn't matter - in practice there's bound to be a few scripts relying
+	// on the internal addressing or other stupid things like that.
+	// They shouldn't, but hey, let's not break them unless we really have to.
+	"10.1.42.1/16",
+	"10.42.42.1/16",
+	"172.16.42.1/24",
+	"172.16.43.1/24",
+	"172.16.44.1/24",
+	"10.0.42.1/24",
+	"10.0.43.1/24",
+	"172.17.42.1/16", // Don't use 172.16.0.0/16, it conflicts with EC2 DNS 172.16.0.23
+	"10.0.42.1/16",   // Don't even try using the entire /8, that's too intrusive
+	"192.168.42.1/24",
+	"192.168.43.1/24",
+	"192.168.44.1/24",
+}
 
 const vlanCount = 4096
 
@@ -41,7 +62,7 @@ func GetNetwork(name string) (*Network, error) {
 }
 
 func GetNetworks() ([]Network, error) {
-	networkBytes, _, ok := netAgent.GetAll(networkStore)
+	networkBytes, _, _ := netAgent.GetAll(networkStore)
 	networks := make([]Network, 0)
 
 	for _, networkByte := range networkBytes {
@@ -60,7 +81,6 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	network, err := GetNetwork(name)
 
 	if err == nil {
-		glog.Infof("Network %s already exist", name)
 		return network, nil
 	}
 
@@ -68,29 +88,47 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	vlanID, err := allocateVlan()
 
 	if err != nil {
-		glog.Infof("Vlan not available")
 		return nil, err
 	}
 
 	var gateway net.IP
 
-	addr, err := util.GetIfaceAddr(name)
+	_, err = util.GetIfaceAddr(name)
 
 	if err != nil {
-		glog.Infof("Network interface %s not exist", name)
 
-		if ovs == nil {
+		/*if ovs == nil {
 			return nil, errors.New("OVS not connected")
-		}
+		}*/
 
-		gateway = IPAMRequest(*subnet)
+		gateway = RequestIP(*subnet)
 		network = &Network{name, subnet.String(), gateway.String(), vlanID}
 	}
+
+	return &Network{}, nil
 
 }
 
 func CreateDefaultNetwork() (*Network, error) {
-	CreateNetwork(defaultNetwork, subnet)
+	//CreateNetwork(defaultNetwork, subnet)
+	return &Network{}, nil
+}
+
+func DeleteNetwork(name string) error {
+	network, err := GetNetwork(name)
+	if err != nil {
+		return err
+	}
+	/*if ovs == nil {
+		return errors.New("OVS not connected")
+	}*/
+	eccerror := netAgent.Delete(networkStore, name)
+	if eccerror != netAgent.OK {
+		return errors.New("Error deleting network")
+	}
+	releaseVlan(network.VlanID)
+	//deletePort(ovs, defaultBridgeName, name)
+	return nil
 }
 
 func allocateVlan() (uint, error) {
@@ -98,8 +136,7 @@ func allocateVlan() (uint, error) {
 
 	// not put the key already
 	if !ok {
-		vlanBytes := make([]byte, vlanCount/8)
-
+		vlanBytes = make([]byte, vlanCount/8)
 	}
 
 	curVal := make([]byte, vlanCount/8)
@@ -111,10 +148,51 @@ func allocateVlan() (uint, error) {
 		return vlanID, errors.New("All vlanID have been used")
 	}
 
-	err := netAgent.Put(vlanStore, "vlan", vlanBytes, curVal)
+	netAgent.Put(vlanStore, "vlan", vlanBytes, curVal)
 
 	return vlanID, nil
 
+}
+
+func releaseVlan(vlanID uint) {
+	oldVal, _, ok := netAgent.Get(vlanStore, "vlan")
+
+	if !ok {
+		oldVal = make([]byte, vlanCount/8)
+	}
+	curVal := make([]byte, vlanCount/8)
+	copy(curVal, oldVal)
+
+	util.Clear(curVal, vlanID-1)
+	err := netAgent.Put(vlanStore, "vlan", curVal, oldVal)
+	if err == netAgent.OUTDATED {
+		releaseVlan(vlanID)
+	}
+}
+func GetAvailableGwAddress(bridgeIP string) (gwaddr string, err error) {
+	if len(bridgeIP) != 0 {
+		_, _, err = net.ParseCIDR(bridgeIP)
+		if err != nil {
+			return
+		}
+		gwaddr = bridgeIP
+	} else {
+		for _, addr := range gatewayAddrs {
+			_, dockerNetwork, err := net.ParseCIDR(addr)
+			if err != nil {
+				return "", err
+			}
+			if err = util.CheckRouteOverlaps(dockerNetwork); err != nil {
+				continue
+			}
+			gwaddr = addr
+			break
+		}
+	}
+	if gwaddr == "" {
+		return "", errors.New("No available gateway addresses")
+	}
+	return gwaddr, nil
 }
 
 func GetAvailableSubnet() (subnet *net.IPNet, err error) {
@@ -152,7 +230,7 @@ func RequestIP(subnet net.IPNet) net.IP {
 
 	newArray := make([]byte, len(oldArray))
 
-	copy(newArray, addrArray)
+	copy(newArray, oldArray)
 
 	pos := util.TestAndSet(newArray)
 
@@ -162,23 +240,23 @@ func RequestIP(subnet net.IPNet) net.IP {
 		return RequestIP(subnet)
 	}
 
-	var num uint32
+	var num uint
 
 	buf := bytes.NewBuffer(subnet.IP)
 
-	err = binary.Read(buf, binary.BigEndian, &num)
+	err2 := binary.Read(buf, binary.BigEndian, &num)
 
-	if err != nil {
-		return nil, err
+	if err2 != nil {
+		return nil
 	}
 
 	num += pos
 
 	buf2 := new(bytes.Buffer)
-	err = binary.Write(buf2, binary.BigEndian, num)
+	err2 = binary.Write(buf2, binary.BigEndian, num)
 
-	if err != nil {
-		return nil, err
+	if err2 != nil {
+		return nil
 	}
 	return net.IP(buf2.Bytes())
 
@@ -186,7 +264,7 @@ func RequestIP(subnet net.IPNet) net.IP {
 
 // Release the given IP from the subnet
 func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
-	oldArray, _, ok := netAgent.Get(ipStore, subnet.String)
+	oldArray, _, ok := netAgent.Get(ipStore, subnet.IP.String())
 
 	if !ok {
 		return false
@@ -195,21 +273,21 @@ func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
 	newArray := make([]byte, len(oldArray))
 	copy(newArray, oldArray)
 
-	var num1, num2 int
+	var num1, num2 uint
 	buf1 := bytes.NewBuffer(oldArray)
-	err := binary.Read(buf1, binary.BigEndian, &num1)
+	binary.Read(buf1, binary.BigEndian, &num1)
 
 	buf := bytes.NewBuffer(subnet.IP)
 
-	err = binary.Read(buf, binary.BigEndian, &num2)
+	binary.Read(buf, binary.BigEndian, &num2)
 
-	pos = num1 - num2
+	pos := num1 - num2 - 1
 
-	util.Clear(newArray, pos-1)
+	util.Clear(newArray, pos)
 
-	err = netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
+	err2 := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
 
-	if err == netAgent.OUTDATED {
+	if err2 == netAgent.OUTDATED {
 		return ReleaseIP(addr, subnet)
 	}
 

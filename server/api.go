@@ -2,8 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/WIZARD-CXY/cxy-sdn/util"
-	_ "github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -12,6 +10,8 @@ type Err struct {
 	code    int
 	message string
 }
+
+const VERSION = "0.1"
 
 type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *Err
 
@@ -75,7 +75,7 @@ func createRouter(d *Daemon) *mux.Router {
 
 // return the cxy-sdn version
 func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
-	w.Write([]byte(util.VERSION))
+	w.Write([]byte(VERSION))
 
 	return nil
 }

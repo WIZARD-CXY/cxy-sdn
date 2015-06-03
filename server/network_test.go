@@ -1,13 +1,27 @@
 package server
 
 import (
+	"flag"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"testing"
 )
 
 var subnetArray []*net.IPNet
+
+// set glog flag to make it happy
+
+func TestMain(m *testing.M) {
+	flag.Set("alsologtostderr", "true")
+	flag.Set("log_dir", "/tmp")
+	flag.Set("v", "3")
+	flag.Parse()
+
+	ret := m.Run()
+	os.Exit(ret)
+}
 
 func TestNetworkInit(t *testing.T) {
 	if os.Getuid() != 0 {
@@ -38,7 +52,7 @@ func TestNetworkCreate(t *testing.T) {
 		t.Skip(msg)
 	}
 	for i := 0; i < len(subnetArray); i++ {
-		network, err := CreateNetwork(fmt.Sprintf("Network-%d", i+1), subnetArray[i])
+		_, err := CreateNetwork(fmt.Sprintf("Network-%d", i+1), subnetArray[i])
 		if err != nil {
 			t.Error("Error Creating network ", err)
 		}
@@ -81,5 +95,45 @@ func TestNetworkCleanup(t *testing.T) {
 		if err != nil {
 			t.Error("Error Deleting Network", err)
 		}
+	}
+}
+
+func TestInitAgent(t *testing.T) {
+	err := InitAgent("eth1", true)
+
+	if err != nil {
+		t.Errorf("Error starting agent")
+	}
+}
+
+func TestRequestandReleaseIP(t *testing.T) {
+	TestCount := rand.Intn(500) + 50
+
+	_, ipNet, _ := net.ParseCIDR("192.168.0.0/16")
+
+	for i := 1; i <= TestCount; i++ {
+		addr := RequestIP(*ipNet)
+		addr = addr.To4()
+		if i%256 != int(addr[3]) || i/256 != int(addr[2]) {
+			t.Error("addr.String()", "is wrong")
+		}
+	}
+
+	if !ReleaseIP(net.ParseIP("192.168.0.1"), *ipNet) {
+		t.Error("Release 192.168.0.1 failed")
+	}
+	if !ReleaseIP(net.ParseIP("192.168.0.4"), *ipNet) {
+		t.Error("Release 192.168.0.4 failed")
+	}
+
+	addr := RequestIP(*ipNet).To4()
+	if int(addr[3]) != 1 {
+		t.Error(addr.String())
+	}
+
+	addr = RequestIP(*ipNet).To4()
+
+	if int(addr[3]) != 4 {
+		t.Error(addr.String())
 	}
 }

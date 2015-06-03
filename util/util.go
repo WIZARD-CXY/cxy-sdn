@@ -9,6 +9,7 @@ import (
 
 	log "github.com/golang/glog"
 	"github.com/vishvananda/netlink"
+	"math"
 )
 
 var (
@@ -248,10 +249,10 @@ func TestAndSet(a []byte) uint {
 }
 
 // count how many IP available in the given subnet
-func IPCount(subnet net.IPNet) {
+func IPCount(subnet net.IPNet) float64 {
 	maskSize, _ := subnet.Mask.Size()
 
-	if addr.IP.To4() != nil {
+	if subnet.IP.To4() != nil {
 		return math.Pow(2, float64(32-maskSize))
 	} else {
 		return math.Pow(2, float64(128-maskSize))

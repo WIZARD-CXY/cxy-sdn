@@ -25,9 +25,9 @@ func TestGetConfigurationEmpty(t *testing.T) {
 func TestGetConfiguration(t *testing.T) {
 	daemon := NewDaemon()
 	// prepare the configs
-	daemon.Configuration = &Configuration{
+	daemon.bridgeConf = &BridgeConf{
 		BridgeIP:   "172.16.42.1",
-		BridgeName: "socketplane0",
+		BridgeName: "br0",
 		BridgeCIDR: "172.16.42.0/24",
 		BridgeMTU:  1460,
 	}
@@ -57,7 +57,7 @@ func TestSetConfigurationNoBody(t *testing.T) {
 
 func TestSetConfigurationBadBody(t *testing.T) {
 	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/configuration", bytes.NewReader([]byte{1, 2, 3, 4}))
+	request, _ := http.NewRequest("POST", "/configuratio", bytes.NewReader([]byte{1, 2, 3, 4}))
 	response := httptest.NewRecorder()
 
 	createRouter(daemon).ServeHTTP(response, request)
@@ -69,14 +69,14 @@ func TestSetConfigurationBadBody(t *testing.T) {
 
 func TestSetConfiguration(t *testing.T) {
 	daemon := NewDaemon()
-	cfg := &Configuration{
+	cfg := &BridgeConf{
 		BridgeIP:   "172.16.42.1",
-		BridgeName: "socketplane0",
+		BridgeName: "br0",
 		BridgeCIDR: "172.16.42.0/24",
 		BridgeMTU:  1460,
 	}
 	data, _ := json.Marshal(cfg)
-	request, _ := http.NewRequest("POST", "/v0.1/configuration", bytes.NewReader(data))
+	request, _ := http.NewRequest("POST", "/configuration", bytes.NewReader(data))
 	response := httptest.NewRecorder()
 
 	createRouter(daemon).ServeHTTP(response, request)

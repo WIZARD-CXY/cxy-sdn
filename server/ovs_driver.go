@@ -226,7 +226,7 @@ func deletePort(ovs *libovsdb.OvsdbClient, bridgeName string, portName string) {
 
 	portUuid := portUuidForName(portName)
 	if portUuid == "" {
-		log.Error("Unable to find a matching Port : ", portName)
+		glog.Error("Unable to find a matching Port : ", portName)
 		return
 	}
 	// Deleting a Bridge row in Bridge table requires mutating the open_vswitch table.
@@ -247,13 +247,13 @@ func deletePort(ovs *libovsdb.OvsdbClient, bridgeName string, portName string) {
 	reply, _ := ovs.Transact("Open_vSwitch", operations...)
 
 	if len(reply) < len(operations) {
-		log.Error("Number of Replies should be atleast equal to number of Operations")
+		glog.Error("Number of Replies should be atleast equal to number of Operations")
 	}
 	for i, o := range reply {
 		if o.Error != "" && i < len(operations) {
-			log.Error("Transaction Failed due to an error :", o.Error, " in ", operations[i])
+			glog.Error("Transaction Failed due to an error :", o.Error, " in ", operations[i])
 		} else if o.Error != "" {
-			log.Error("Transaction Failed due to an error :", o.Error)
+			glog.Error("Transaction Failed due to an error :", o.Error)
 		}
 	}
 }
@@ -339,7 +339,7 @@ func AddInternalPort(ovs *libovsdb.OvsdbClient, bridgeName string, portName stri
 	operations := []libovsdb.Operation{insertIntfOp, insertPortOp, mutateOp}
 	reply, _ := ovs.Transact("Open_vSwitch", operations...)
 	if len(reply) < len(operations) {
-		log.Error("Number of Replies should be atleast equal to number of Operations")
+		glog.Error("Number of Replies should be atleast equal to number of Operations")
 		return errors.New("Number of Replies should be atleast equal to number of Operations")
 	}
 	for i, o := range reply {
@@ -397,7 +397,7 @@ func ovs_connect() (*libovsdb.OvsdbClient, error) {
 	for getRootUuid() == "" {
 		time.Sleep(time.Second * 1)
 	}
-	glog.Debugf("Connected to OVS...")
+	glog.Infof("Connected to OVS...")
 	return ovs, nil
 }
 
