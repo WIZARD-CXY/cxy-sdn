@@ -16,52 +16,43 @@ import (
 	"time"
 
 	"github.com/WIZARD-CXY/cxy-sdn/util"
-	"github.com/golang/glog"
+	// "github.com/golang/glog"
 	"github.com/socketplane/libovsdb"
 	"github.com/vishvananda/netns"
 )
 
-// Setting a mtu value for tunnel
 const mtu = 1440
-const defaultBridgeName = "ovs-br"
+const bridgeName = "ovs-br0"
 
-type Bridge struct {
-	Name string
-	//	IP     net.IP
-	//	Subnet *net.IPNet
-}
-
-var OvsBridge Bridge = Bridge{Name: defaultBridgeName}
-
-var ovs *libovsdb.OvsdbClient
+var ovsClient *libovsdb.OvsdbClient
 var ContextCache map[string]string
 
-func OvsInit() {
+func init() {
 	var err error
-	ovs, err = ovs_connect()
+	ovsClient, err = ovs_connect()
 	if err != nil {
-		glog.Error("Error connecting OVS ", err)
+		fmt.Println("Error connecting OVS ", err)
 	} else {
-		ovs.Register(notifier{})
+		ovsClient.Register(notifier{})
 	}
 	ContextCache = make(map[string]string)
 	populateContextCache()
 }
 
 func CreateBridge() error {
-	if ovs == nil {
+	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
-	// If the bridge has been created, a port with the same name should exist
-	exists, err := portExists(ovs, OvsBridge.Name)
+	// If the bridge has been created, a internal port with the same name should exist
+	exists, err := portExists(ovsClient, bridgeName)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		if err := createBridgeIface(OvsBridge.Name); err != nil {
+		if err := CreateOVSBridge(ovsClient, bridgeName); err != nil {
 			return err
 		}
-		exists, err = portExists(ovs, OvsBridge.Name)
+		exists, err = portExists(ovsClient, bridgeName)
 		if err != nil {
 			return err
 		}
@@ -72,28 +63,27 @@ func CreateBridge() error {
 	return nil
 }
 
-func createBridgeIface(name string) error {
-	// TODO : Error handling for CreateOVSBridge.
-	CreateOVSBridge(ovs, name)
-	// TODO : Lame. Remove the sleep. This is required now to keep netlink happy
-	// in the next step to find the created interface.
-	time.Sleep(time.Second * 1)
+func DeleteBridge() error {
+	if ovsClient == nil {
+		return errors.New("OVS not connected")
+	}
+	DeleteOVSBridge(ovsClient, bridgeName)
 	return nil
 }
 
 func AddPeer(peerIp string) error {
-	if ovs == nil {
+	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
-	addVxlanPort(ovs, OvsBridge.Name, "vxlan-"+peerIp, peerIp)
+	addVxlanPort(ovsClient, bridgeName, "vxlan-"+peerIp, peerIp)
 	return nil
 }
 
 func DeletePeer(peerIp string) error {
-	if ovs == nil {
+	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
-	deletePort(ovs, OvsBridge.Name, "vxlan-"+peerIp)
+	deletePort(ovsClient, bridgeName, "vxlan-"+peerIp)
 	return nil
 }
 
@@ -148,7 +138,7 @@ func ConnectionRPCHandler(d *Daemon) {
 
 func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {
 	var (
-		bridge = OvsBridge.Name
+		bridge = bridgeName
 		prefix = "ovs"
 	)
 	ovsConnection = OvsConnection{}
@@ -267,11 +257,11 @@ func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 }
 
 func UpdateConnectionContext(ovsPort string, key string, context string) error {
-	return UpdatePortContext(ovs, ovsPort, key, context)
+	return UpdatePortContext(ovsClient, ovsPort, key, context)
 }
 
 func populateContextCache() {
-	if ovs == nil {
+	if ovsClient == nil {
 		return
 	}
 	tableCache := GetTableCache("Interface")
@@ -289,10 +279,10 @@ func populateContextCache() {
 }
 
 func DeleteConnection(connection OvsConnection) error {
-	if ovs == nil {
+	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
-	deletePort(ovs, OvsBridge.Name, connection.Name)
+	deletePort(ovsClient, bridgeName, connection.Name)
 	ip := net.ParseIP(connection.Ip)
 	_, subnet, _ := net.ParseCIDR(connection.Ip + connection.Subnet)
 	ReleaseIP(ip, *subnet)
@@ -306,12 +296,12 @@ func createOvsInternalPort(prefix string, bridge string, tag uint) (port string,
 		return
 	}
 
-	if ovs == nil {
+	if ovsClient == nil {
 		err = errors.New("OVS not connected")
 		return
 	}
 
-	AddInternalPort(ovs, bridge, port, tag)
+	AddInternalPort(ovsClient, bridge, port, tag)
 	return
 }
 
@@ -358,37 +348,37 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		iptables -A FORWARD -o %bridgeName -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 	*/
 
-	glog.Infof("Setting up iptables")
+	//glog.Infof("Setting up iptables")
 	natArgs := []string{"-t", "nat", "-A", "POSTROUTING", "-s", bridgeIP, "!", "-o", bridgeName, "-j", "MASQUERADE"}
 	output, err := installRule(natArgs...)
 	if err != nil {
-		glog.Infof("Unable to enable network bridge NAT: %s", err)
+		//glog.Infof("Unable to enable network bridge NAT: %s", err)
 		return fmt.Errorf("Unable to enable network bridge NAT: %s", err)
 	}
 	if len(output) != 0 {
-		glog.Errorf("Error enabling network bridge NAT: %s", err)
+		//glog.Errorf("Error enabling network bridge NAT: %s", err)
 		return fmt.Errorf("Error enabling network bridge NAT: %s", output)
 	}
 
 	outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "!", "-o", bridgeName, "-j", "ACCEPT"}
 	output, err = installRule(outboundArgs...)
 	if err != nil {
-		glog.Errorf("Unable to enable network outbound forwarding: %s", err)
+		//glog.Errorf("Unable to enable network outbound forwarding: %s", err)
 		return fmt.Errorf("Unable to enable network outbound forwarding: %s", err)
 	}
 	if len(output) != 0 {
-		glog.Errorf("Error enabling network outbound forwarding: %s", output)
+		//glog.Errorf("Error enabling network outbound forwarding: %s", output)
 		return fmt.Errorf("Error enabling network outbound forwarding: %s", output)
 	}
 
 	inboundArgs := []string{"-A", "FORWARD", "-o", bridgeName, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}
 	output, err = installRule(inboundArgs...)
 	if err != nil {
-		glog.Errorf("Unable to enable network inbound forwarding: %s", err)
+		//glog.Errorf("Unable to enable network inbound forwarding: %s", err)
 		return fmt.Errorf("Unable to enable network inbound forwarding: %s", err)
 	}
 	if len(output) != 0 {
-		glog.Errorf("Error enabling network inbound forwarding: %s")
+		//glog.Errorf("Error enabling network inbound forwarding: %s")
 		return fmt.Errorf("Error enabling network inbound forwarding: %s", output)
 	}
 	return nil
@@ -409,12 +399,6 @@ func installRule(args ...string) ([]byte, error) {
 }
 
 type notifier struct {
-}
-
-func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
-	glog.Errorf("OVS Disconnected. Retrying...")
-	ovs = nil
-	go OvsInit()
 }
 
 func (n notifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {

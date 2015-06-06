@@ -3,7 +3,7 @@ package server
 import (
 	_ "fmt"
 	"github.com/codegangsta/cli"
-	"github.com/golang/glog"
+	// "github.com/golang/glog"
 	"os"
 	"os/signal"
 )
@@ -22,7 +22,7 @@ func NewDaemon() *Daemon {
 	}
 }
 func (d *Daemon) Run(ctx *cli.Context) {
-	glog.Info("Daemon Starting ...")
+	// glog.Info("Daemon Starting ...")
 
 	d.isBootstrap = ctx.Bool("bootstrap")
 

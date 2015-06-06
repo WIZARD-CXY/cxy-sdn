@@ -1,13 +1,12 @@
 package util
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"net"
 
-	log "github.com/golang/glog"
+	// log "github.com/golang/glog"
 	"github.com/vishvananda/netlink"
 	"math"
 )
@@ -57,15 +56,6 @@ func NetworkRange(network *net.IPNet) (net.IP, net.IP) {
 	return firstIP, lastIP
 }
 
-// Given a netmask, calculates the number of available hosts
-func NetworkSize(mask net.IPMask) int32 {
-	m := net.IPv4Mask(0, 0, 0, 0)
-	for i := 0; i < net.IPv4len; i++ {
-		m[i] = ^mask[i]
-	}
-	return int32(binary.BigEndian.Uint32(m)) + 1
-}
-
 // Return the IPv4 address of a network interface
 func GetIfaceAddr(name string) (*net.IPNet, error) {
 	iface, err := netlink.LinkByName(name)
@@ -83,7 +73,7 @@ func GetIfaceAddr(name string) (*net.IPNet, error) {
 	}
 
 	if len(addrs) > 1 {
-		log.Info("Interface %v has more than 1 IPv4 address. Defaulting to using %v\n", name, addrs[0].IP)
+		// log.Info("Interface %v has more than 1 IPv4 address. Defaulting to using %v\n", name, addrs[0].IP)
 	}
 
 	return addrs[0].IPNet, nil
@@ -219,7 +209,7 @@ func GetIfaceForRoute(address string) (string, error) {
 }
 
 // set the given bit, 0 index based
-func set(a []byte, k uint) {
+func set(a []byte, k uint32) {
 	a[k/8] |= 1 << (k % 8)
 }
 
@@ -229,17 +219,17 @@ func Clear(a []byte, k uint) {
 }
 
 // test whether the given bit is 1, 0 index based
-func test(a []byte, k uint) bool {
+func test(a []byte, k uint32) bool {
 	return ((a[k/8] & (1 << (k % 8))) != 0)
 }
 
 // get the smallest 0 bit index and set it
 // return its index, 1 based
 // return len(a)*8+1 as all bits are set
-func TestAndSet(a []byte) uint {
-	var i uint
+func TestAndSet(a []byte) uint32 {
+	var i uint32
 
-	for i = uint(0); i < uint(len(a)*8); i++ {
+	for i = 0; i < uint32(len(a)*8); i++ {
 		if !test(a, i) {
 			set(a, i)
 			return i + 1

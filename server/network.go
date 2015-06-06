@@ -5,15 +5,17 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
 	"github.com/WIZARD-CXY/netAgent"
 	"math"
 	"net"
+	"time"
 )
 
-const networkStore = "network"
-const vlanStore = "vlan"
-const ipStore = "ip"
+const networkStore = "networkStore"
+const vlanStore = "vlanStore"
+const ipStore = "ipStore"
 const defaultNetwork = "default"
 
 var gatewayAddrs = []string{
@@ -81,6 +83,8 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	network, err := GetNetwork(name)
 
 	if err == nil {
+		//already exist
+		fmt.Printf("Network %s already exist\n", name)
 		return network, nil
 	}
 
@@ -93,25 +97,73 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 	var gateway net.IP
 
-	_, err = util.GetIfaceAddr(name)
+	addr, err := util.GetIfaceAddr(name)
 
 	if err != nil {
-
-		/*if ovs == nil {
-			return nil, errors.New("OVS not connected")
-		}*/
+		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
 
 		gateway = RequestIP(*subnet)
 		network = &Network{name, subnet.String(), gateway.String(), vlanID}
+
+		if err = AddInternalPort(ovsClient, bridgeName, name, vlanID); err != nil {
+			return network, err
+		}
+		time.Sleep(1 * time.Second)
+
+		gatewayCIDR := &net.IPNet{gateway, subnet.Mask}
+
+		fmt.Println("haha1")
+		if err = util.SetMtu(name, mtu); err != nil {
+			return network, err
+		}
+		fmt.Println("haha2")
+		if err = util.SetInterfaceIp(name, gatewayCIDR.String()); err != nil {
+			return network, err
+		}
+		fmt.Println("haha3")
+		if err = util.InterfaceUp(name); err != nil {
+			return network, err
+		}
+
+	} else {
+		fmt.Printf("Interface %s already exists\n", name)
+		ifaceAddr := addr.String()
+
+		gateway, subnet, err = net.ParseCIDR(ifaceAddr)
+
+		if err != nil {
+			return nil, err
+		}
+		network = &Network{name, subnet.String(), gateway.String(), vlanID}
+	}
+	fmt.Println("haha4")
+
+	netBytes, _ := json.Marshal(network)
+
+	if err != nil {
+		return nil, err
 	}
 
-	return &Network{}, nil
+	err2 := netAgent.Put(networkStore, name, netBytes, nil)
+
+	if err2 == netAgent.OUTDATED {
+		releaseVlan(vlanID)
+		ReleaseIP(gateway, *subnet)
+		return CreateNetwork(name, subnet)
+	}
+
+	// TODO setup other things like ovsClient and iptables
+
+	return network, nil
 
 }
 
 func CreateDefaultNetwork() (*Network, error) {
-	//CreateNetwork(defaultNetwork, subnet)
-	return &Network{}, nil
+	subnet, err := GetAvailableSubnet()
+	if err != nil {
+		return &Network{}, err
+	}
+	return CreateNetwork(defaultNetwork, subnet)
 }
 
 func DeleteNetwork(name string) error {
@@ -119,15 +171,17 @@ func DeleteNetwork(name string) error {
 	if err != nil {
 		return err
 	}
-	/*if ovs == nil {
-		return errors.New("OVS not connected")
-	}*/
+
 	eccerror := netAgent.Delete(networkStore, name)
 	if eccerror != netAgent.OK {
 		return errors.New("Error deleting network")
 	}
 	releaseVlan(network.VlanID)
-	//deletePort(ovs, defaultBridgeName, name)
+
+	if ovsClient == nil {
+		return errors.New("OVS not connected")
+	}
+	deletePort(ovsClient, bridgeName, name)
 	return nil
 }
 
@@ -145,12 +199,12 @@ func allocateVlan() (uint, error) {
 	vlanID := util.TestAndSet(vlanBytes)
 
 	if vlanID > vlanCount {
-		return vlanID, errors.New("All vlanID have been used")
+		return uint(vlanID), errors.New("All vlanID have been used")
 	}
 
 	netAgent.Put(vlanStore, "vlan", vlanBytes, curVal)
 
-	return vlanID, nil
+	return uint(vlanID), nil
 
 }
 
@@ -223,7 +277,7 @@ func RequestIP(subnet net.IPNet) net.IP {
 	}
 
 	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
-
+	//fmt.Println("wahaha", ipCount, subnet.String(), oldArray)
 	if !ok {
 		oldArray = make([]byte, bc)
 	}
@@ -234,19 +288,22 @@ func RequestIP(subnet net.IPNet) net.IP {
 
 	pos := util.TestAndSet(newArray)
 
+	//fmt.Println("wahaha2", newArray)
+
 	err := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
 
 	if err == netAgent.OUTDATED {
 		return RequestIP(subnet)
 	}
 
-	var num uint
+	var num uint32
 
 	buf := bytes.NewBuffer(subnet.IP)
 
 	err2 := binary.Read(buf, binary.BigEndian, &num)
 
 	if err2 != nil {
+		fmt.Println(err)
 		return nil
 	}
 
@@ -264,8 +321,9 @@ func RequestIP(subnet net.IPNet) net.IP {
 
 // Release the given IP from the subnet
 func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
-	oldArray, _, ok := netAgent.Get(ipStore, subnet.IP.String())
+	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
 
+	fmt.Println("xixi", oldArray)
 	if !ok {
 		return false
 	}
@@ -273,15 +331,18 @@ func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
 	newArray := make([]byte, len(oldArray))
 	copy(newArray, oldArray)
 
-	var num1, num2 uint
-	buf1 := bytes.NewBuffer(oldArray)
+	var num1, num2 uint32
+
+	buf1 := bytes.NewBuffer(addr.To4())
 	binary.Read(buf1, binary.BigEndian, &num1)
 
 	buf := bytes.NewBuffer(subnet.IP)
 
 	binary.Read(buf, binary.BigEndian, &num2)
 
-	pos := num1 - num2 - 1
+	pos := uint(num1 - num2 - 1)
+
+	fmt.Println("hahaha", num1, num2, pos)
 
 	util.Clear(newArray, pos)
 

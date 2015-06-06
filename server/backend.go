@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/WIZARD-CXY/netAgent"
-	"github.com/golang/glog"
 	"os"
 )
 
@@ -29,13 +28,13 @@ func JoinCluster(addr string) error {
 
 func LeaveDataStore() error {
 	if err := netAgent.Leave(); err != nil {
-		glog.Error(err)
+		//glog.Error(err)
 		return err
 	}
 
 	//clean the data storage
 	if err := os.RemoveAll(dataDir); err != nil {
-		glog.Error(err)
+		// glog.Error(err)
 		return err
 	}
 
@@ -44,10 +43,10 @@ func LeaveDataStore() error {
 
 func (l Listener) NotifyNodeUpdate(nType netAgent.NotifyUpdateType, nodeAddr string) {
 	if nType == netAgent.NOTIFY_UPDATE_ADD {
-		glog.Infof("New node %s joined in", nodeAddr)
+		// glog.Infof("New node %s joined in", nodeAddr)
 		AddPeer(nodeAddr)
 	} else if nType == netAgent.NOTIFY_UPDATE_DELETE {
-		glog.Infof("Node %s left", nodeAddr)
+		// glog.Infof("Node %s left", nodeAddr)
 		DeletePeer(nodeAddr)
 	}
 }
