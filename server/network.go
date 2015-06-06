@@ -112,15 +112,14 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 		gatewayCIDR := &net.IPNet{gateway, subnet.Mask}
 
-		fmt.Println("haha1")
 		if err = util.SetMtu(name, mtu); err != nil {
 			return network, err
 		}
-		fmt.Println("haha2")
+
 		if err = util.SetInterfaceIp(name, gatewayCIDR.String()); err != nil {
 			return network, err
 		}
-		fmt.Println("haha3")
+
 		if err = util.InterfaceUp(name); err != nil {
 			return network, err
 		}
@@ -136,7 +135,6 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		}
 		network = &Network{name, subnet.String(), gateway.String(), vlanID}
 	}
-	fmt.Println("haha4")
 
 	netBytes, _ := json.Marshal(network)
 
@@ -264,7 +262,7 @@ func GetAvailableSubnet() (subnet *net.IPNet, err error) {
 }
 
 // ipStore manage the cluster ip resource
-// key is the subnet, value is the available ip address
+// key is the subnet, value is the available ip address bytes
 
 // Get an IP from the subnet and mark it as used
 func RequestIP(subnet net.IPNet) net.IP {
@@ -277,7 +275,7 @@ func RequestIP(subnet net.IPNet) net.IP {
 	}
 
 	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
-	//fmt.Println("wahaha", ipCount, subnet.String(), oldArray)
+
 	if !ok {
 		oldArray = make([]byte, bc)
 	}
@@ -287,8 +285,6 @@ func RequestIP(subnet net.IPNet) net.IP {
 	copy(newArray, oldArray)
 
 	pos := util.TestAndSet(newArray)
-
-	//fmt.Println("wahaha2", newArray)
 
 	err := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
 
@@ -323,7 +319,6 @@ func RequestIP(subnet net.IPNet) net.IP {
 func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
 	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
 
-	fmt.Println("xixi", oldArray)
 	if !ok {
 		return false
 	}
@@ -341,8 +336,6 @@ func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
 	binary.Read(buf, binary.BigEndian, &num2)
 
 	pos := uint(num1 - num2 - 1)
-
-	fmt.Println("hahaha", num1, num2, pos)
 
 	util.Clear(newArray, pos)
 

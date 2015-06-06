@@ -17,8 +17,6 @@ func TestStartAgent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error starting agent")
 	}
-	// wait a little while for agent fully started
-	//time.Sleep(3 * time.Second)
 }
 
 func TestNetworkInit(t *testing.T) {
@@ -36,10 +34,10 @@ func TestNetworkInit(t *testing.T) {
 
 	subnetArray = []*net.IPNet{ipNet1, ipNet2, ipNet3, ipNet4}
 
-	// create the ovs bridge
-	// if err := CreateBridge(); err != nil {
-	// 	t.Fatalf("Creat ovs bridge failed")
-	// }
+	//create the ovs bridge
+	if err := CreateBridge(); err != nil {
+		t.Fatalf("Creat ovs bridge failed")
+	}
 }
 
 func TestGetEmptyNetworks(t *testing.T) {
@@ -49,7 +47,7 @@ func TestGetEmptyNetworks(t *testing.T) {
 	}
 }
 
-/*func TestNetworkCreate(t *testing.T) {
+func TestNetworkCreate(t *testing.T) {
 	if os.Getuid() != 0 {
 		msg := "Skipping TestNetworkCreate because it requires root privileges."
 		fmt.Println(msg)
@@ -63,7 +61,7 @@ func TestGetEmptyNetworks(t *testing.T) {
 		fmt.Println("Network", i+1, "Created Successfully")
 	}
 }
-*/
+
 /*func TestGetNetwork(t *testing.T) {
 	if os.Getuid() != 0 {
 		msg := "Skipped test because it requires root privileges."
@@ -89,7 +87,6 @@ func TestRequestandReleaseIP(t *testing.T) {
 	for i := 1; i <= TestCount; i++ {
 		addr := RequestIP(*ipNet)
 		addr = addr.To4()
-		fmt.Println("wawa", addr)
 		if addr == nil || i%256 != int(addr[3]) || i/256 != int(addr[2]) {
 			t.Error(addr.String(), "is wrong")
 		}
@@ -105,16 +102,16 @@ func TestRequestandReleaseIP(t *testing.T) {
 		t.Error("Release 192.168.0.2 failed")
 	}
 
-	// addr := RequestIP(*ipNet).To4()
-	// if int(addr[3]) != 1 {
-	// 	t.Error(addr.String())
-	// }
+	addr := RequestIP(*ipNet).To4()
+	if int(addr[3]) != 1 {
+		t.Error(addr.String())
+	}
 
-	// addr = RequestIP(*ipNet).To4()
+	addr = RequestIP(*ipNet).To4()
 
-	// if int(addr[3]) != 4 {
-	// 	t.Error(addr.String())
-	// }
+	if int(addr[3]) != 2 {
+		t.Error(addr.String())
+	}
 }
 
 // func TestNetworkCleanup(t *testing.T) {

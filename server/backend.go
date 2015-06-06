@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/WIZARD-CXY/cxy-sdn/util"
 	"github.com/WIZARD-CXY/netAgent"
 	"os"
 )
@@ -44,7 +45,11 @@ func LeaveDataStore() error {
 func (l Listener) NotifyNodeUpdate(nType netAgent.NotifyUpdateType, nodeAddr string) {
 	if nType == netAgent.NOTIFY_UPDATE_ADD {
 		// glog.Infof("New node %s joined in", nodeAddr)
-		AddPeer(nodeAddr)
+		myIp, _ := util.MyIP()
+		if nodeAddr != myIp {
+			// add tunnel to the other node
+			AddPeer(nodeAddr)
+		}
 	} else if nType == netAgent.NOTIFY_UPDATE_DELETE {
 		// glog.Infof("Node %s left", nodeAddr)
 		DeletePeer(nodeAddr)
