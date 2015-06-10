@@ -268,7 +268,6 @@ func MyIP() (string, error) {
 			return "", err
 		}
 		for _, addr := range addrs {
-			fmt.Println(addr)
 			var ip net.IP
 			switch v := addr.(type) {
 			case *net.IPNet:

@@ -9,6 +9,7 @@ import (
 )
 
 var subnetArray []*net.IPNet
+var bridgeUUID string
 
 func TestStartAgent(t *testing.T) {
 	fmt.Println("haha")
@@ -35,8 +36,10 @@ func TestNetworkInit(t *testing.T) {
 	subnetArray = []*net.IPNet{ipNet1, ipNet2, ipNet3, ipNet4}
 
 	//create the ovs bridge
-	if err := CreateBridge(); err != nil {
+	if bridgeUUID, err := CreateBridge(); err != nil {
 		t.Fatalf("Creat ovs bridge failed")
+	} else {
+		fmt.Printf("Bridge %s created\n", bridgeUUID)
 	}
 }
 
@@ -62,12 +65,7 @@ func TestNetworkCreate(t *testing.T) {
 	}
 }
 
-/*func TestGetNetwork(t *testing.T) {
-	if os.Getuid() != 0 {
-		msg := "Skipped test because it requires root privileges."
-		fmt.Println(msg)
-		t.Skip(msg)
-	}
+func TestGetNetwork(t *testing.T) {
 	for i := 0; i < len(subnetArray); i++ {
 		network, _ := GetNetwork(fmt.Sprintf("Network-%d", i+1))
 		if network == nil {
@@ -78,7 +76,7 @@ func TestNetworkCreate(t *testing.T) {
 		fmt.Println("GetNetwork : ", network)
 	}
 }
-*/
+
 func TestRequestandReleaseIP(t *testing.T) {
 	TestCount := 5
 
@@ -114,21 +112,24 @@ func TestRequestandReleaseIP(t *testing.T) {
 	}
 }
 
-// func TestNetworkCleanup(t *testing.T) {
-// 	time.Sleep(10 * time.Minute)
-// 	if os.Getuid() != 0 {
-// 		msg := "Skipped test because it requires root privileges."
-// 		fmt.Println(msg)
-// 		t.Skip(msg)
-// 	}
-// 	for i := 0; i < len(subnetArray); i++ {
-// 		err := DeleteNetwork(fmt.Sprintf("Network-%d", i+1))
-// 		if err != nil {
-// 			t.Error("Error Deleting Network", err)
-// 		}
-// 	}
-// 	// TODO Delete the bridge
-// }
+func TestNetworkCleanup(t *testing.T) {
+	if os.Getuid() != 0 {
+		msg := "Skipped test because it requires root privileges."
+		fmt.Println(msg)
+		t.Skip(msg)
+	}
+	for i := 0; i < len(subnetArray); i++ {
+		err := DeleteNetwork(fmt.Sprintf("Network-%d", i+1))
+		if err != nil {
+			t.Error("Error Deleting Network", err)
+		}
+	}
+
+	// delete the ovs bridge
+	/*if err := DeleteBridge(bridgeUUID); err != nil {
+		t.Error("Delete ovs bridge failed", err)
+	}*/
+}
 
 func TestLeaveCluster(t *testing.T) {
 	if err := LeaveDataStore(); err != nil {

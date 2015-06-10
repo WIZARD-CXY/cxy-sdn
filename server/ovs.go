@@ -39,35 +39,39 @@ func init() {
 	populateContextCache()
 }
 
-func CreateBridge() error {
+func CreateBridge() (string, error) {
+	var bridgeUUID string
 	if ovsClient == nil {
-		return errors.New("OVS not connected")
+		return "", errors.New("OVS not connected")
 	}
 	// If the bridge has been created, a internal port with the same name should exist
 	exists, err := portExists(ovsClient, bridgeName)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !exists {
-		if err := CreateOVSBridge(ovsClient, bridgeName); err != nil {
-			return err
+		bridgeUUID, err = CreateOVSBridge(ovsClient, bridgeName)
+		if err != nil {
+			return "", err
 		}
 		exists, err = portExists(ovsClient, bridgeName)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if !exists {
-			return errors.New("Error creating Bridge")
+			return "", errors.New("Error creating Bridge")
 		}
 	}
-	return nil
+	return bridgeUUID, nil
 }
 
-func DeleteBridge() error {
+func DeleteBridge(bridgeUUID string) error {
 	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
-	DeleteOVSBridge(ovsClient, bridgeName)
+	if err := DeleteOVSBridge(ovsClient, bridgeName, bridgeUUID); err != nil {
+		return err
+	}
 	return nil
 }
 

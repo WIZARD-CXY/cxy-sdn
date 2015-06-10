@@ -45,7 +45,7 @@ func monitorDockerBridge(ovsClient *libovsdb.OvsdbClient) {
 	}
 }
 
-func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) error {
+func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) (string, error) {
 	namedBridgeUuid := "bridge"
 	namedPortUuid := "port"
 	namedIntfUuid := "intf"
@@ -90,6 +90,7 @@ func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) error {
 	mutateUuid := []libovsdb.UUID{libovsdb.UUID{namedBridgeUuid}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "insert", mutateSet)
+	fmt.Println("xixi", getRootUuid())
 	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 
 	// simple mutate operation
@@ -104,64 +105,34 @@ func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) error {
 	reply, _ := ovsClient.Transact("Open_vSwitch", operations...)
 
 	if len(reply) < len(operations) {
-		return errors.New("Number of Replies should be atleast equal to number of Operations")
+		return "", errors.New("Number of Replies should be atleast equal to number of Operations")
 	}
 	for i, o := range reply {
 		if o.Error != "" && i < len(operations) {
-			return errors.New("Transaction Failed due to an error :" + o.Error + " details : " + o.Details)
+			return "", errors.New("Transaction Failed due to an error :" + o.Error + " details : " + o.Details)
 		} else if o.Error != "" {
-			return errors.New("Transaction Failed due to an error :" + o.Error + " details : " + o.Details)
+			return "", errors.New("Transaction Failed due to an error :" + o.Error + " details : " + o.Details)
 		}
 	}
-	return nil
+	return reply[0].UUID.GoUuid, nil
 }
 
-func DeleteOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) error {
-	namedBridgeUuid := "bridge"
-	namedPortUuid := "port"
-	namedIntfUuid := "intf"
+func DeleteOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName, bridgeUuid string) error {
+	condition := libovsdb.NewCondition("name", "==", bridgeName)
 
-	// intf row to insert
-	intf := make(map[string]interface{})
-	intf["name"] = bridgeName
-	intf["type"] = `internal`
-
-	insertIntfOp := libovsdb.Operation{
-		Op:       "delete",
-		Table:    "Interface",
-		Row:      intf,
-		UUIDName: namedIntfUuid,
+	deleteOp := libovsdb.Operation{
+		Op:    "delete",
+		Table: "Bridge",
+		Where: []interface{}{condition},
 	}
 
-	// port row to insert
-	port := make(map[string]interface{})
-	port["name"] = bridgeName
-	port["interfaces"] = libovsdb.UUID{namedIntfUuid}
-
-	insertPortOp := libovsdb.Operation{
-		Op:       "delete",
-		Table:    "Port",
-		Row:      port,
-		UUIDName: namedPortUuid,
-	}
-
-	// bridge row to insert
-	bridge := make(map[string]interface{})
-	bridge["name"] = bridgeName
-	bridge["stp_enable"] = true
-	bridge["ports"] = libovsdb.UUID{namedPortUuid}
-
-	insertBridgeOp := libovsdb.Operation{
-		Op:       "delete",
-		Table:    "Bridge",
-		Row:      bridge,
-		UUIDName: namedBridgeUuid,
-	}
-	// Inserting a Bridge row in Bridge table requires mutating the open_vswitch table.
-	mutateUuid := []libovsdb.UUID{libovsdb.UUID{namedBridgeUuid}}
+	// Deleting a Bridge row in Bridge table requires mutating the open_vswitch table.
+	mutateUuid := []libovsdb.UUID{libovsdb.UUID{bridgeUuid}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "delete", mutateSet)
-	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
+	// hacked Condition till we get Monitor / Select working
+	fmt.Println("-------", getRootUuid())
+	condition = libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
@@ -171,17 +142,18 @@ func DeleteOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) error {
 		Where:     []interface{}{condition},
 	}
 
-	operations := []libovsdb.Operation{insertIntfOp, insertPortOp, insertBridgeOp, mutateOp}
+	operations := []libovsdb.Operation{deleteOp, mutateOp}
 	reply, _ := ovsClient.Transact("Open_vSwitch", operations...)
 
 	if len(reply) < len(operations) {
-		return errors.New("Number of Replies should be atleast equal to number of Operations")
+		return errors.New("Number of Replies should be at least equal to number of Operations")
 	}
+
 	for i, o := range reply {
 		if o.Error != "" && i < len(operations) {
-			return errors.New("Transaction Failed due to an error :" + o.Error + " details : " + o.Details)
+			return errors.New("Transaction Failed due to an error : " + o.Error + " details : " + o.Details)
 		} else if o.Error != "" {
-			return errors.New("Transaction Failed due to an error :" + o.Error + " details : " + o.Details)
+			return errors.New("Transaction Failed due to an error : " + o.Error + " details : " + o.Details)
 		}
 	}
 	return nil
