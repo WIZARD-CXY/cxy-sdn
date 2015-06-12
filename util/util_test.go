@@ -4,7 +4,9 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"net"
+	"os"
 	"runtime"
 	"testing"
 
@@ -19,6 +21,12 @@ type tearDown func()
 // Each test that calls setUp runs in it's own netns
 func setUp(t *testing.T) tearDown {
 	// lock thread since the namespace is thread local
+	if os.Getuid() != 0 {
+		msg := "Skipped test because it requires root privileges."
+		fmt.Println(msg)
+		t.Skip(msg)
+	}
+
 	runtime.LockOSThread()
 	var err error
 	ns, err := netns.New()
@@ -89,15 +97,6 @@ func TestNetworkRange(t *testing.T) {
 
 }
 
-func TestNetworkSize(t *testing.T) {
-	mask := net.IPv4Mask(255, 255, 255, 0)
-	result := NetworkSize(mask)
-	expected := int32(256)
-	if result != expected {
-		t.Fatalf("got %v, expected %v\n", result, expected)
-	}
-}
-
 func TestGetDefaultRouteIface(t *testing.T) {
 	result, err := GetDefaultRouteIface()
 	if err != nil {
@@ -140,6 +139,7 @@ func TestSetInterfaceInNamespacePid(t *testing.T) {
 }
 
 func TestSetInterfaceInNamespaceFd(t *testing.T) {
+
 	teardown := setUp(t)
 	defer teardown()
 
@@ -163,6 +163,7 @@ func TestSetInterfaceInNamespaceFd(t *testing.T) {
 }
 
 func TestSetInterfaceMac(t *testing.T) {
+
 	teardown := setUp(t)
 	defer teardown()
 

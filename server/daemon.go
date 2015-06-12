@@ -26,7 +26,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 
 	d.isBootstrap = ctx.Bool("bootstrap")
 
-	go ServeAPI(d)
+	go ServeApi(d)
 
 	sig_chan := make(chan os.Signal, 1)
 	signal.Notify(sig_chan, os.Interrupt)

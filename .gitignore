@@ -17,4 +17,7 @@ _book
 
 #tags file
 .tags
-.tags_sort_by_file
+.tags_sorted_by_file
+
+server/coverage.out
+server/coverage.out

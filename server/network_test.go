@@ -22,7 +22,7 @@ func TestStartAgent(t *testing.T) {
 
 func TestNetworkInit(t *testing.T) {
 	if os.Getuid() != 0 {
-		msg := "Skipping TestNetworkCreate because it requires root privileges."
+		msg := "Skipping TestNetworkInit because it requires root privileges."
 		fmt.Println(msg)
 		t.Skip(msg)
 	}

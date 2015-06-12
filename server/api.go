@@ -6,21 +6,22 @@ import (
 	"net/http"
 )
 
-type Err struct {
+type HttpErr struct {
 	code    int
 	message string
 }
 
 const VERSION = "0.1"
 
-type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *Err
+type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr
 
-type Handler struct {
+// myHandler implement http.Handler
+type myHandler struct {
 	*Daemon
 	fct HttpApiFunc
 }
 
-func (handler Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler myHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := handler.fct(handler.Daemon, w, r)
 	if err != nil {
 		http.Error(w, err.message, err.code)
@@ -35,18 +36,17 @@ type BridgeConf struct {
 }
 
 type Connection struct {
-	ContainerID   string `json:"container_id"`
-	ContainerName string `json:"container_name"`
-	ContainerPID  string `json:"container_pid"`
-	Network       string `json:"network"`
-	OvsPortID     string `json:"ovsport_id"`
+	ContainerID   string `json:"containerID"`
+	ContainerName string `json:"containerName"`
+	ContainerPID  string `json:"containerPID"`
+	Network       string `json:"networkName"`
+	OvsPortID     string `json:"ovsPortID"`
 }
 
-func ServeAPI(d *Daemon) {
-	r := createRouter(d)
+func ServeApi(d *Daemon) {
 	server := &http.Server{
 		Addr:    "127.0.0.1:6675",
-		Handler: r,
+		Handler: createRouter(d),
 	}
 	server.ListenAndServe()
 }
@@ -66,7 +66,7 @@ func createRouter(d *Daemon) *mux.Router {
 
 	for method, routes := range m {
 		for uri, Func := range routes {
-			handler := Handler{d, Func}
+			handler := myHandler{d, Func}
 			r.Path(uri).Methods(method).Handler(handler)
 		}
 	}
@@ -74,14 +74,14 @@ func createRouter(d *Daemon) *mux.Router {
 }
 
 // return the cxy-sdn version
-func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
+func getVersion(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	w.Write([]byte(VERSION))
 
 	return nil
 }
 
-// get the bridge conf
-func getConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
+// get the ovs bridge conf
+func getConf(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	conf, _ := json.Marshal(d.bridgeConf)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -91,9 +91,9 @@ func getConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
 }
 
 // set the bridge conf
-func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
+func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	if r.Body == nil {
-		return &Err{http.StatusBadRequest, "SetConf requese has no body"}
+		return &HttpErr{http.StatusBadRequest, "SetConf requese has no body"}
 	}
 
 	cfg := &BridgeConf{}
@@ -102,7 +102,7 @@ func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
 	err := decoder.Decode(cfg)
 
 	if err != nil {
-		return &Err{http.StatusInternalServerError, "setConf json decode failed"}
+		return &HttpErr{http.StatusInternalServerError, "setConf json decode failed"}
 	}
 
 	d.bridgeConf = cfg
@@ -110,7 +110,7 @@ func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
 }
 
 // get all the connections
-func getCons(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
+func getCons(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	data, _ := json.Marshal(d.connections)
 	w.Header().Set("Content-type", "application/json; charset=utf-8")
 	w.Write(data)
@@ -119,10 +119,10 @@ func getCons(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
 }
 
 // get all the existing network
-func getNets(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
+func getNets(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	networks, err := GetNetworks()
 	if err != nil {
-		return &Err{http.StatusInternalServerError, err.Error()}
+		return &HttpErr{http.StatusInternalServerError, err.Error()}
 	}
 
 	data, err := json.Marshal(networks)
@@ -130,5 +130,4 @@ func getNets(d *Daemon, w http.ResponseWriter, r *http.Request) *Err {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(data)
 	return nil
-
 }
