@@ -191,14 +191,14 @@ func TestDeleteNetworkNonExistentApi(t *testing.T) {
 	}
 }
 
-// test the node join or leave functionality
-/*func TestClusterJoin(t *testing.T) {
+// test the node join and leave functionality
+func TestClusterJoin(t *testing.T) {
 	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/cluster/join?address=1.1.1.1", nil)
 	response := httptest.NewRecorder()
 
-	go createRouter(daemon).ServeHTTP(response, request)
-	foo := <-daemon.bindChan
+	go createRouter(d).ServeHTTP(response, request)
+	foo := <-d.clusterChan
 	if foo == nil {
 		t.Fatal("object from bindChan is nil")
 	}
@@ -209,23 +209,23 @@ func TestDeleteNetworkNonExistentApi(t *testing.T) {
 }
 
 func TestClusterJoiniBadIp(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/cluster/join?address=bar", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
-	if response.Code != http.StatusInternalServerError {
+	if response.Code != http.StatusBadRequest {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "500", response.Code)
 	}
 }
 
 func TestClusterJoinNoParams(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/cluster/join", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatal("request should fail")
@@ -233,11 +233,11 @@ func TestClusterJoinNoParams(t *testing.T) {
 }
 
 func TestClusterJoinBadParams(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/cluster/join?foo!@£%£", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatal("request should fail")
@@ -245,11 +245,11 @@ func TestClusterJoinBadParams(t *testing.T) {
 }
 
 func TestClusterJoinBadParams2(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/cluster/join?foo=bar", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatal("request should fail")
@@ -257,9 +257,19 @@ func TestClusterJoinBadParams2(t *testing.T) {
 }
 
 func TestClusterLeave(t *testing.T) {
-	t.Skip("Not implemented")
+	d := NewDaemon()
+
+	request, _ := http.NewRequest("POST", "/cluster/leave", nil)
+	response := httptest.NewRecorder()
+
+	createRouter(d).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
+	}
 }
 
+/*
 func TestClusterBind(t *testing.T) {
 	daemon := NewDaemon()
 	request, _ := http.NewRequest("POST", "/cluster/bind?iface=eth0", nil)

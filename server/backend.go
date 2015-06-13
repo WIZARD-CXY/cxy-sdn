@@ -23,11 +23,11 @@ func InitAgent(bindInterface string, bootstrap bool) error {
 	return err
 }
 
-func JoinCluster(addr string) error {
+func join(addr string) error {
 	return netAgent.Join(addr)
 }
 
-func LeaveDataStore() error {
+func leave() error {
 	if err := netAgent.Leave(); err != nil {
 		//glog.Error(err)
 		return err

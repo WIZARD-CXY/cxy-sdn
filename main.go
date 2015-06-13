@@ -19,8 +19,8 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "iface, i",
-			Value: "auto",
-			Usage: "Network Interface to bind, default is auto",
+			Value: "eth0",
+			Usage: "Network Interface to bind, default is eth0",
 		},
 		cli.BoolFlag{
 			Name:  "bootstrap, b",

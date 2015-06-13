@@ -132,7 +132,7 @@ func TestNetworkCleanup(t *testing.T) {
 }
 
 func TestLeaveCluster(t *testing.T) {
-	if err := LeaveDataStore(); err != nil {
+	if err := leave(); err != nil {
 		t.Error("Error leaving the cluster")
 	}
 }

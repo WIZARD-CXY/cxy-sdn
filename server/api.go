@@ -2,8 +2,11 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
+	"net"
 	"net/http"
+	"net/url"
 )
 
 type HttpErr struct {
@@ -61,6 +64,8 @@ func createRouter(d *Daemon) *mux.Router {
 		},
 		"POST": {
 			"/configuration": setConf,
+			"/cluster/join":  joinCluster,
+			"/cluster/leave": leaveCluster,
 		},
 	}
 
@@ -129,5 +134,39 @@ func getNets(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(data)
+	return nil
+}
+
+func joinCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
+	if r.URL.RawQuery == "" {
+		return &HttpErr{http.StatusBadRequest, "address missing"}
+	}
+
+	kvs, err := url.ParseQuery(r.URL.RawQuery)
+
+	if err != nil {
+		return &HttpErr{http.StatusBadRequest, "parse query string error"}
+	}
+
+	addr, ok := kvs["address"]
+
+	if !ok || addr[0] == "" {
+		return &HttpErr{http.StatusBadRequest, "address parameter not exist"}
+	}
+
+	fmt.Println("Join to cluster", addr[0])
+
+	ip := net.ParseIP(addr[0])
+	if ip == nil {
+		return &HttpErr{http.StatusBadRequest, "Invalid IP address"}
+	}
+
+	d.clusterChan <- &ClusterInfo{ip.String(), nodeJoin}
+	return nil
+}
+
+func leaveCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
+	d.clusterChan <- &ClusterInfo{"", nodeLeave}
+
 	return nil
 }
