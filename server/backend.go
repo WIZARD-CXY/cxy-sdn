@@ -2,8 +2,9 @@ package server
 
 import (
 	"github.com/WIZARD-CXY/cxy-sdn/util"
-	"github.com/WIZARD-CXY/netAgent"
+	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
 	"os"
+        _ "fmt"
 )
 
 const dataDir = "/tmp/cxy/"
@@ -32,13 +33,11 @@ func leave() error {
 		//glog.Error(err)
 		return err
 	}
-
 	//clean the data storage
 	if err := os.RemoveAll(dataDir); err != nil {
 		// glog.Error(err)
 		return err
 	}
-
 	return nil
 }
 

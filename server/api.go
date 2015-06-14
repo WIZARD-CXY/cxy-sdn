@@ -166,7 +166,7 @@ func joinCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 }
 
 func leaveCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
-	d.clusterChan <- &ClusterInfo{"", nodeLeave}
+        d.clusterChan <- &ClusterInfo{"", nodeLeave}
 
 	return nil
 }

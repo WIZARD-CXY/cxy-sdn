@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
-	"github.com/WIZARD-CXY/netAgent"
+	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
 	"math"
 	"net"
 	"time"

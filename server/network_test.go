@@ -12,7 +12,6 @@ var subnetArray []*net.IPNet
 var bridgeUUID string
 
 func TestStartAgent(t *testing.T) {
-	fmt.Println("haha")
 	err := InitAgent("eth1", true)
 
 	if err != nil {

@@ -200,7 +200,7 @@ func TestClusterJoin(t *testing.T) {
 	go createRouter(d).ServeHTTP(response, request)
 	foo := <-d.clusterChan
 	if foo == nil {
-		t.Fatal("object from bindChan is nil")
+		t.Fatal("object from clusterChan is nil")
 	}
 
 	if response.Code != http.StatusOK {
@@ -262,7 +262,12 @@ func TestClusterLeave(t *testing.T) {
 	request, _ := http.NewRequest("POST", "/cluster/leave", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(d).ServeHTTP(response, request)
+	go createRouter(d).ServeHTTP(response, request)
+	
+        foo := <-d.clusterChan
+	if foo == nil {
+		t.Fatal("object from clusterChan is nil")
+	}
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
