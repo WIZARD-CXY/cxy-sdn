@@ -100,44 +100,43 @@ type OvsConnection struct {
 }
 
 const (
-	ConnectionAdd    = iota
-	ConnectionUpdate = iota
-	ConnectionDelete = iota
+	addConn = iota
+	updateConn
+	deleteConn
 )
 
-type ConnectionContext struct {
+type ConnectionCtx struct {
 	Action     int
 	Connection *Connection
 	Result     chan *Connection
 }
 
-func ConnectionRPCHandler(d *Daemon) {
-	/*for {
-		c := <-d.cC
+func connHandler(d *Daemon) {
+	for {
+		c := <-d.connectionChan
 
 		switch c.Action {
-		case ConnectionAdd:
+		case addConn:
 			pid, _ := strconv.Atoi(c.Connection.ContainerPID)
-			fmt.Println("PID", pid)
-			connDetails, err := AddConnection(pid, c.Connection.Network)
+			connDetail, err := AddConnection(pid, c.Connection.Network)
 			if err != nil {
 				fmt.Printf("err is %+v\n", err)
 				return
 			}
-			fmt.Printf("connDetails %v\n", connDetails)
-			c.Connection.OvsPortID = connDetails.Name
-			c.Connection.ConnectionDetails = connDetails
-			d.Connections[c.Connection.ContainerID] = c.Connection
+			fmt.Printf("connDetails %v\n", connDetail)
+			c.Connection.OvsPortID = connDetail.Name
+			c.Connection.ConnectionDetail = connDetail
+			d.connections[c.Connection.ContainerID] = c.Connection
 			// ToDo: We should deprecate this when we have a proper CLI
 			c.Result <- c.Connection
-		case ConnectionUpdate:
+		case updateConn:
 			// noop
-		case ConnectionDelete:
-			DeleteConnection(c.Connection.ConnectionDetails)
-			delete(d.Connections, c.Connection.ContainerID)
+		case deleteConn:
+			DeleteConnection(c.Connection.ConnectionDetail)
+			delete(d.connections, c.Connection.ContainerID)
 			c.Result <- c.Connection
 		}
-	}*/
+	}
 }
 
 func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {

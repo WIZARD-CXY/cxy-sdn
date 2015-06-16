@@ -6,9 +6,24 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	_ "reflect"
+	"reflect"
 	"testing"
 )
+
+// test get version
+
+func TestGetVersion(t *testing.T) {
+	d := NewDaemon()
+
+	request, _ := http.NewRequest("GET", "/version", nil)
+	response := httptest.NewRecorder()
+
+	createRouter(d).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
+	}
+}
 
 // test conf related
 func TestGetConfigurationEmpty(t *testing.T) {
@@ -263,8 +278,8 @@ func TestClusterLeave(t *testing.T) {
 	response := httptest.NewRecorder()
 
 	go createRouter(d).ServeHTTP(response, request)
-	
-        foo := <-d.clusterChan
+
+	foo := <-d.clusterChan
 	if foo == nil {
 		t.Fatal("object from clusterChan is nil")
 	}
@@ -274,77 +289,12 @@ func TestClusterLeave(t *testing.T) {
 	}
 }
 
-/*
-func TestClusterBind(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/cluster/bind?iface=eth0", nil)
-	response := httptest.NewRecorder()
-
-	go createRouter(daemon).ServeHTTP(response, request)
-	foo := <-daemon.bindChan
-	if foo == nil {
-		t.Fatal("object from bindChan is nil")
-	}
-
-	if response.Code != http.StatusOK {
-		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
-	}
-}
-
-func TestClusterBindBadIface(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/cluster/bind?iface=foo123", nil)
-	response := httptest.NewRecorder()
-
-	createRouter(daemon).ServeHTTP(response, request)
-
-	if response.Code != http.StatusInternalServerError {
-		t.Fatalf("Expected %v:\n\tReceived: %v", "500", response.Code)
-	}
-}
-
-func TestClusterBindNoParams(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/cluster/bind", nil)
-	response := httptest.NewRecorder()
-
-	createRouter(daemon).ServeHTTP(response, request)
-
-	if response.Code != http.StatusBadRequest {
-		t.Fatal("request should fail")
-	}
-}
-
-func TestClusterBindBadParams(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/cluster/bind?foo!@£%£", nil)
-	response := httptest.NewRecorder()
-
-	createRouter(daemon).ServeHTTP(response, request)
-
-	if response.Code != http.StatusBadRequest {
-		t.Fatal("request should fail")
-	}
-}
-
-func TestClusterBindBadParams2(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/cluster/bind?foo=bar", nil)
-	response := httptest.NewRecorder()
-
-	createRouter(daemon).ServeHTTP(response, request)
-
-	if response.Code != http.StatusBadRequest {
-		t.Fatal("request should fail")
-	}
-}
-
 func TestGetConnections(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("GET", "/connections", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
@@ -352,21 +302,21 @@ func TestGetConnections(t *testing.T) {
 }
 
 func TestGetConnection(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
 		ContainerPID:  "1234",
 		Network:       "default",
 	}
-	daemon.Connections["abc123"] = connection
-	request, _ := http.NewRequest("GET", "/connections/abc123", nil)
+	d.connections["abc123"] = connection
+	request, _ := http.NewRequest("GET", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
-		t.Fatalf("Expected %v:\n\tReceived: %v", "404", response.Code)
+		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
 	}
 
 	expected, _ := json.Marshal(connection)
@@ -381,7 +331,7 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestCreateConnection(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
@@ -389,16 +339,16 @@ func TestCreateConnection(t *testing.T) {
 		Network:       "foo",
 	}
 	data, _ := json.Marshal(connection)
-	request, _ := http.NewRequest("POST", "/connections", bytes.NewReader(data))
+	request, _ := http.NewRequest("POST", "/connection", bytes.NewReader(data))
 	response := httptest.NewRecorder()
 
 	go func() {
 		for {
-			context := <-daemon.cC
+			context := <-d.connectionChan
 			if context == nil {
 				t.Fatalf("Object taken from channel is nil")
 			}
-			if context.Action != ConnectionAdd {
+			if context.Action != addConn {
 				t.Fatal("should be adding a new connection")
 			}
 
@@ -409,7 +359,7 @@ func TestCreateConnection(t *testing.T) {
 		}
 	}()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v:\n\t%v", "200", response.Code, response.Body)
@@ -423,17 +373,10 @@ func TestCreateConnection(t *testing.T) {
 	if contentHeader[0] != "application/json; charset=utf-8" {
 		t.Fatal("headers not correctly set")
 	}
-
-	locationHeader := response.HeaderMap["Content-Location"]
-	fmt.Println(locationHeader[0])
-	expected := "/connections/abc123"
-	if locationHeader[0] != expected {
-		t.Fatal("header not correctly set")
-	}
 }
 
 func TestCreateConnectionNoNetwork(t *testing.T) {
-	daemon := NewDaemon()
+	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
@@ -448,16 +391,16 @@ func TestCreateConnectionNoNetwork(t *testing.T) {
 	}
 
 	data, _ := json.Marshal(connection)
-	request, _ := http.NewRequest("POST", "/connections", bytes.NewReader(data))
+	request, _ := http.NewRequest("POST", "/connection", bytes.NewReader(data))
 	response := httptest.NewRecorder()
 
 	go func() {
 		for {
-			context := <-daemon.cC
+			context := <-d.connectionChan
 			if context == nil {
 				t.Fatalf("Object taken from channel is nil")
 			}
-			if context.Action != ConnectionAdd {
+			if context.Action != addConn {
 				t.Fatal("should be adding a new connection")
 			}
 
@@ -468,7 +411,7 @@ func TestCreateConnectionNoNetwork(t *testing.T) {
 		}
 	}()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v:\n\t%v", "200", response.Code, response.Body)
@@ -483,21 +426,14 @@ func TestCreateConnectionNoNetwork(t *testing.T) {
 	if contentHeader[0] != "application/json; charset=utf-8" {
 		t.Fatal("headers not correctly set")
 	}
-
-	locationHeader := response.HeaderMap["Content-Location"]
-	fmt.Println(locationHeader[0])
-	expectedHeader := "/connections/abc123"
-	if locationHeader[0] != expectedHeader {
-		t.Fatal("header not correctly set")
-	}
 }
 
 func TestCreateConnectionNoBody(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/connections", nil)
+	d := NewDaemon()
+	request, _ := http.NewRequest("POST", "/connection", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "400", response.Code)
@@ -505,11 +441,11 @@ func TestCreateConnectionNoBody(t *testing.T) {
 }
 
 func TestCreateConnectionBadBody(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("POST", "/connections", bytes.NewReader([]byte{1, 2, 3, 4}))
+	d := NewDaemon()
+	request, _ := http.NewRequest("POST", "/connection", bytes.NewReader([]byte{1, 2, 3, 4}))
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusInternalServerError {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "500", response.Code)
@@ -517,17 +453,18 @@ func TestCreateConnectionBadBody(t *testing.T) {
 }
 
 func TestGetConnectionNonExistent(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("GET", "/connections/abc123", nil)
+	d := NewDaemon()
+	request, _ := http.NewRequest("GET", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "404", response.Code)
 	}
 }
 
+/*
 func TestDeleteConnectionNonExistent(t *testing.T) {
 	daemon := NewDaemon()
 	request, _ := http.NewRequest("DELETE", "/connections/abc123", nil)

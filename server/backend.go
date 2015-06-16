@@ -1,10 +1,10 @@
 package server
 
 import (
+	_ "fmt"
+	"github.com/WIZARD-CXY/cxy-sdn/agent"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
-	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
 	"os"
-        _ "fmt"
 )
 
 const dataDir = "/tmp/cxy/"

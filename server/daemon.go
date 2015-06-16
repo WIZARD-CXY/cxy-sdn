@@ -1,7 +1,6 @@
 package server
 
 import (
-	_ "fmt"
 	"github.com/codegangsta/cli"
 	// "github.com/golang/glog"
 	"fmt"
@@ -10,14 +9,16 @@ import (
 )
 
 type Daemon struct {
-	bridgeConf    *BridgeConf
-	isBootstrap   bool
-	connections   map[string]*Connection
-	bindInterface string
-	clusterChan   chan *ClusterInfo
+	bridgeConf     *BridgeConf
+	isBootstrap    bool
+	connections    map[string]*Connection
+	bindInterface  string
+	clusterChan    chan *NodeCtx
+	connectionChan chan *ConnectionCtx
+	readyChan      chan bool
 }
 
-type ClusterInfo struct {
+type NodeCtx struct {
 	param  string
 	action int
 }
@@ -31,17 +32,17 @@ func NewDaemon() *Daemon {
 	return &Daemon{
 		&BridgeConf{},
 		false,
-		map[string]*Connection{},
+		make(map[string]*Connection, 50),
 		"",
-		make(chan *ClusterInfo),
+		make(chan *NodeCtx),
+		make(chan *ConnectionCtx),
+		make(chan bool),
 	}
 }
 func (d *Daemon) Run(ctx *cli.Context) {
-	// glog.Info("Daemon Starting ...")
-
 	d.isBootstrap = ctx.Bool("bootstrap")
 
-	// use for netns
+	// set up dir use for netns
 	if err := os.Mkdir("/var/run/netns", 0777); err != nil {
 		fmt.Println("mkdir /var/run/netns failed", err)
 	}
@@ -61,7 +62,27 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	}()
 
 	// start a goroutine
-	go manageNode(d)
+	go nodeHanler(d)
+
+	go func() {
+		if !d.isBootstrap {
+			fmt.Println("None bootstrap node , wait for joining the cluster")
+		}
+
+		<-d.readyChan
+
+		fmt.Println("Joined to cluster")
+
+		if _, err := CreateBridge(); err != nil {
+			fmt.Println("Err in create ovs bridge", err.Error())
+		}
+
+		if _, err := CreateDefaultNetwork(); err != nil {
+			fmt.Println("Create Default network error")
+		}
+	}()
+
+	go connHandler(d)
 
 	sig_chan := make(chan os.Signal, 1)
 	signal.Notify(sig_chan, os.Interrupt)
@@ -71,10 +92,11 @@ func (d *Daemon) Run(ctx *cli.Context) {
 			os.Exit(0)
 		}
 	}()
+
 	select {}
 }
 
-func manageNode(d *Daemon) {
+func nodeHanler(d *Daemon) {
 	for {
 		context := <-d.clusterChan
 		switch context.action {

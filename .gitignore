@@ -20,4 +20,5 @@ _book
 .tags_sorted_by_file
 
 server/coverage.out
-server/coverage.out
+agent/data-dir/
+agent/coverage.out
