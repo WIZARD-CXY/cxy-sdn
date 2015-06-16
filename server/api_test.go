@@ -128,7 +128,7 @@ func TestGetNetworkApi(t *testing.T) {
 	}
 	*/
 
-	request, _ := http.NewRequest("GET", "/networks/foo", nil)
+	request, _ := http.NewRequest("GET", "/network/foo", nil)
 	response := httptest.NewRecorder()
 
 	createRouter(daemon).ServeHTTP(response, request)
@@ -149,7 +149,7 @@ func TestSetNetworksApi(t *testing.T) {
 	}
 	data, _ := json.Marshal(network)
 
-	request, _ := http.NewRequest("POST", "/networks", bytes.NewReader(data))
+	request, _ := http.NewRequest("POST", "/network", bytes.NewReader(data))
 	response := httptest.NewRecorder()
 
 	createRouter(daemon).ServeHTTP(response, request)
@@ -159,9 +159,9 @@ func TestSetNetworksApi(t *testing.T) {
 	}
 }
 
-func TestDeleteNetworksApi(t *testing.T) {
+func TestDeleteNetworkApi(t *testing.T) {
 	t.Skip("unable to mock network store")
-	daemon := NewDaemon()
+	d := NewDaemon()
 	/* ToDo: How do we inject this network?
 	network := &Network{
 		ID:      "foo",
@@ -174,7 +174,7 @@ func TestDeleteNetworksApi(t *testing.T) {
 	request, _ := http.NewRequest("DELETE", "/networks", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
@@ -183,11 +183,11 @@ func TestDeleteNetworksApi(t *testing.T) {
 
 func TestGetNetworkNonExistentApi(t *testing.T) {
 	t.Skip("unable to mock network store")
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("GET", "/networks/abc123", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "404", response.Code)
@@ -196,11 +196,11 @@ func TestGetNetworkNonExistentApi(t *testing.T) {
 
 func TestDeleteNetworkNonExistentApi(t *testing.T) {
 	t.Skip("unable to mock network store")
-	daemon := NewDaemon()
+	d := NewDaemon()
 	request, _ := http.NewRequest("DELETE", "/connections/abc123", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "404", response.Code)
 	}
@@ -289,7 +289,7 @@ func TestClusterLeave(t *testing.T) {
 	}
 }
 
-func TestGetConnections(t *testing.T) {
+func TestGetConns(t *testing.T) {
 	d := NewDaemon()
 	request, _ := http.NewRequest("GET", "/connections", nil)
 	response := httptest.NewRecorder()
@@ -301,7 +301,7 @@ func TestGetConnections(t *testing.T) {
 	}
 }
 
-func TestGetConnection(t *testing.T) {
+func TestGetConn(t *testing.T) {
 	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
@@ -330,7 +330,7 @@ func TestGetConnection(t *testing.T) {
 	}
 }
 
-func TestCreateConnection(t *testing.T) {
+func TestCreateConn(t *testing.T) {
 	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
@@ -375,7 +375,7 @@ func TestCreateConnection(t *testing.T) {
 	}
 }
 
-func TestCreateConnectionNoNetwork(t *testing.T) {
+func TestCreateConnNoNetwork(t *testing.T) {
 	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
@@ -428,7 +428,7 @@ func TestCreateConnectionNoNetwork(t *testing.T) {
 	}
 }
 
-func TestCreateConnectionNoBody(t *testing.T) {
+func TestCreateConnNoBody(t *testing.T) {
 	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/connection", nil)
 	response := httptest.NewRecorder()
@@ -440,7 +440,7 @@ func TestCreateConnectionNoBody(t *testing.T) {
 	}
 }
 
-func TestCreateConnectionBadBody(t *testing.T) {
+func TestCreateConnBadBody(t *testing.T) {
 	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/connection", bytes.NewReader([]byte{1, 2, 3, 4}))
 	response := httptest.NewRecorder()
@@ -452,7 +452,7 @@ func TestCreateConnectionBadBody(t *testing.T) {
 	}
 }
 
-func TestGetConnectionNonExistent(t *testing.T) {
+func TestGetConnNonExistent(t *testing.T) {
 	d := NewDaemon()
 	request, _ := http.NewRequest("GET", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
@@ -464,38 +464,37 @@ func TestGetConnectionNonExistent(t *testing.T) {
 	}
 }
 
-/*
-func TestDeleteConnectionNonExistent(t *testing.T) {
-	daemon := NewDaemon()
-	request, _ := http.NewRequest("DELETE", "/connections/abc123", nil)
+func TestDeleteConnNonExistent(t *testing.T) {
+	d := NewDaemon()
+	request, _ := http.NewRequest("DELETE", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "404", response.Code)
 	}
 }
 
-func TestDeleteConnection(t *testing.T) {
-	daemon := NewDaemon()
+func TestDeleteConn(t *testing.T) {
+	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
 		ContainerPID:  "1234",
 		Network:       "default",
 	}
-	daemon.Connections["abc123"] = connection
-	request, _ := http.NewRequest("DELETE", "/connections/abc123", nil)
+	d.connections["abc123"] = connection
+	request, _ := http.NewRequest("DELETE", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
 
 	go func() {
 		for {
-			context := <-daemon.cC
+			context := <-d.connectionChan
 			if context == nil {
 				t.Fatalf("Object taken from channel is nil")
 			}
-			if context.Action != ConnectionDelete {
+			if context.Action != deleteConn {
 				t.Fatal("should be adding a new connection")
 			}
 
@@ -506,11 +505,10 @@ func TestDeleteConnection(t *testing.T) {
 		}
 	}()
 
-	createRouter(daemon).ServeHTTP(response, request)
+	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
 	}
 
 }
-*/

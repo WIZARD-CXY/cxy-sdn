@@ -412,3 +412,6 @@ func (n notifier) Stolen([]interface{}) {
 }
 func (n notifier) Echo([]interface{}) {
 }
+func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
+	fmt.Println("OVS Disconnected. Retrying...")
+}
