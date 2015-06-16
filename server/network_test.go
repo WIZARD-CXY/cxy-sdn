@@ -43,6 +43,11 @@ func TestNetworkInit(t *testing.T) {
 }
 
 func TestGetEmptyNetworks(t *testing.T) {
+	if os.Getuid() != 0 {
+		msg := "Skipping TestNetworkInit because it requires root privileges."
+		fmt.Println(msg)
+		t.Skip(msg)
+	}
 	networks, _ := GetNetworks()
 	if networks == nil {
 		t.Error("GetNetworks must return an empty array when networks are not created ")

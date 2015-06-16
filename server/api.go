@@ -49,7 +49,7 @@ type Connection struct {
 
 func ServeApi(d *Daemon) {
 	server := &http.Server{
-		Addr:    "127.0.0.1:6675",
+		Addr:    "127.0.0.1:8888",
 		Handler: createRouter(d),
 	}
 	server.ListenAndServe()

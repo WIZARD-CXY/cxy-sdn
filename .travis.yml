@@ -5,3 +5,20 @@ go:
   - tip
 
 script: make
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq openvswitch-common
+  - sudo apt-get install -qq openvswitch-switch
+install:   
+  - go get github.com/codegangsta/cli
+  - go get github.com/golang/glog
+  - go get github.com/gorilla/mux
+  - go get github.com/hashicorp/consul/api
+  - go get github.com/hashicorp/consul/command
+  - go get github.com/hashicorp/consul/command/agent
+  - go get github.com/hashicorp/consul/command/agent
+  - go get github.com/hashicorp/consul/watch
+  - go get github.com/mitchellh/cli
+  - go get github.com/socketplane/libovsdb
+  - go get github.com/vishvananda/netlink
+  - go get github.com/vishvananda/netns

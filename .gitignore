@@ -19,6 +19,10 @@ _book
 .tags
 .tags_sorted_by_file
 
+#coverage files
 server/coverage.out
 agent/data-dir/
 agent/coverage.out
+util/coverage.out
+
+cxy-sdn
