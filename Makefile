@@ -2,7 +2,7 @@ all: build test
 
 build:
 	go build -v
-	docker build -t wizardcxy/cxy-sdn .
+	#docker build -t wizardcxy/cxy-sdn .
 
 test:
 	#cd server && go test -covermode=count -test.short -coverprofile=coverage.out -v

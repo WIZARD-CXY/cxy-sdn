@@ -19,6 +19,6 @@ install:
   - go get github.com/hashicorp/consul/command/agent
   - go get github.com/hashicorp/consul/watch
   - go get github.com/mitchellh/cli
-  - go get github.com/cxy-sdn/libovsdb
+  - go get github.com/socketplane/libovsdb
   - go get github.com/vishvananda/netlink
   - go get github.com/vishvananda/netns
