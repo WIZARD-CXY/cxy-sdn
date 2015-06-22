@@ -1,7 +1,7 @@
 package server
 
 import (
-	_ "fmt"
+	"fmt"
 	"github.com/WIZARD-CXY/cxy-sdn/agent"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
 	"os"
@@ -39,6 +39,24 @@ func leave() error {
 		return err
 	}
 	return nil
+}
+
+func nodeHandler(d *Daemon) {
+	for {
+		context := <-d.clusterChan
+		switch context.action {
+		case nodeJoin:
+			ip := context.param
+			if err := join(ip); err != nil {
+				fmt.Println("Error joining the cluster")
+			}
+		case nodeLeave:
+			if err := leave(); err != nil {
+				fmt.Println("Error leaving the cluster")
+			}
+
+		}
+	}
 }
 
 func (l Listener) NotifyNodeUpdate(nType netAgent.NotifyUpdateType, nodeAddr string) {

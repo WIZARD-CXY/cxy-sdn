@@ -1,6 +1,6 @@
 package netAgent
 
-// Commands supported by Embedded net agent
+// Commands supported by Embedded agent
 // commands.go borrows from Consul's commands.go
 
 import (

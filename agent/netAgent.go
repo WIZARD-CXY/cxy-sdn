@@ -208,7 +208,7 @@ func Get(store string, key string) ([]byte, int, bool) {
 
 // get all key-value pairs in one store from backend
 func GetAll(store string) ([][]byte, []int, bool) {
-	url := CONSUL_KV_BASE_URL + store + "?recursive"
+	url := CONSUL_KV_BASE_URL + store + "?recurse"
 
 	resp, err := http.Get(url)
 	defer resp.Body.Close()

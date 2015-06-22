@@ -24,7 +24,7 @@ func main() {
 		},
 		cli.BoolFlag{
 			Name:  "bootstrap, b",
-			Usage: "--bootstrap/-b for the first instance being started",
+			Usage: "bootstrap for the first instance being started",
 		},
 	}
 

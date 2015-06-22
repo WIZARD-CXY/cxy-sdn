@@ -62,7 +62,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	}()
 
 	// start a goroutine
-	go nodeHanler(d)
+	go nodeHandler(d)
 
 	go func() {
 		if !d.isBootstrap {
@@ -94,22 +94,4 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	}()
 
 	select {}
-}
-
-func nodeHanler(d *Daemon) {
-	for {
-		context := <-d.clusterChan
-		switch context.action {
-		case nodeJoin:
-			ip := context.param
-			if err := join(ip); err != nil {
-				fmt.Println("Error joining the cluster")
-			}
-		case nodeLeave:
-			if err := leave(); err != nil {
-				fmt.Println("Error leaving the cluster")
-			}
-
-		}
-	}
 }

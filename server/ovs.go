@@ -27,6 +27,25 @@ const bridgeName = "ovs-br0"
 var ovsClient *libovsdb.OvsdbClient
 var ContextCache map[string]string
 
+type OvsConnection struct {
+	Name    string `json:"name"`
+	Ip      string `json:"ip"`
+	Subnet  string `json:"subnet"`
+	Mac     string `json:"mac"`
+	Gateway string `json:"gateway"`
+}
+
+const (
+	addConn = iota
+	deleteConn
+)
+
+type ConnectionCtx struct {
+	Action     int
+	Connection *Connection
+	Result     chan *Connection
+}
+
 func init() {
 	var err error
 	ovsClient, err = ovs_connect()
@@ -91,26 +110,6 @@ func DeletePeer(peerIp string) error {
 	return nil
 }
 
-type OvsConnection struct {
-	Name    string `json:"name"`
-	Ip      string `json:"ip"`
-	Subnet  string `json:"subnet"`
-	Mac     string `json:"mac"`
-	Gateway string `json:"gateway"`
-}
-
-const (
-	addConn = iota
-	updateConn
-	deleteConn
-)
-
-type ConnectionCtx struct {
-	Action     int
-	Connection *Connection
-	Result     chan *Connection
-}
-
 func connHandler(d *Daemon) {
 	for {
 		c := <-d.connectionChan
@@ -118,7 +117,7 @@ func connHandler(d *Daemon) {
 		switch c.Action {
 		case addConn:
 			pid, _ := strconv.Atoi(c.Connection.ContainerPID)
-			connDetail, err := AddConnection(pid, c.Connection.Network)
+			connDetail, err := addConnection(pid, c.Connection.Network)
 			if err != nil {
 				fmt.Printf("err is %+v\n", err)
 				return
@@ -127,10 +126,7 @@ func connHandler(d *Daemon) {
 			c.Connection.OvsPortID = connDetail.Name
 			c.Connection.ConnectionDetail = connDetail
 			d.connections[c.Connection.ContainerID] = c.Connection
-			// ToDo: We should deprecate this when we have a proper CLI
 			c.Result <- c.Connection
-		case updateConn:
-			// noop
 		case deleteConn:
 			DeleteConnection(c.Connection.ConnectionDetail)
 			delete(d.connections, c.Connection.ContainerID)
@@ -139,7 +135,7 @@ func connHandler(d *Daemon) {
 	}
 }
 
-func AddConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {
+func addConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {
 	var (
 		bridge = bridgeName
 		prefix = "ovs"
