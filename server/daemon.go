@@ -67,11 +67,9 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	go func() {
 		if !d.isBootstrap {
 			fmt.Println("None bootstrap node , wait for joining the cluster")
+			<-d.readyChan
+			fmt.Println("None bootstrap node , joined to the cluster")
 		}
-
-		<-d.readyChan
-
-		fmt.Println("Joined to cluster")
 
 		if _, err := CreateBridge(); err != nil {
 			fmt.Println("Err in create ovs bridge", err.Error())

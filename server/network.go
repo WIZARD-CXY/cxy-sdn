@@ -150,7 +150,9 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		return CreateNetwork(name, subnet)
 	}
 
-	// TODO setup other things like ovsClient and iptables
+	if err = setupIPTables(network.Name, network.Subnet); err != nil {
+		return network, err
+	}
 
 	return network, nil
 

@@ -50,6 +50,8 @@ func nodeHandler(d *Daemon) {
 			if err := join(ip); err != nil {
 				fmt.Println("Error joining the cluster")
 			}
+			fmt.Println("join to cluster master", ip)
+			d.readyChan <- true
 		case nodeLeave:
 			if err := leave(); err != nil {
 				fmt.Println("Error leaving the cluster")

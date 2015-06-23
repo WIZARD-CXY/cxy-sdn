@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -113,11 +112,11 @@ func DeletePeer(peerIp string) error {
 func connHandler(d *Daemon) {
 	for {
 		c := <-d.connectionChan
+		fmt.Println("receive new conn")
 
 		switch c.Action {
 		case addConn:
-			pid, _ := strconv.Atoi(c.Connection.ContainerPID)
-			connDetail, err := addConnection(pid, c.Connection.Network)
+			connDetail, err := addConnection(c.Connection.ContainerPID, c.Connection.Network)
 			if err != nil {
 				fmt.Printf("err is %+v\n", err)
 				return
@@ -135,7 +134,7 @@ func connHandler(d *Daemon) {
 	}
 }
 
-func addConnection(nspid int, networkName string) (ovsConnection OvsConnection, err error) {
+func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err error) {
 	var (
 		bridge = bridgeName
 		prefix = "ovs"
@@ -151,7 +150,7 @@ func addConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 	if networkName == "" {
 		networkName = defaultNetwork
 	}
-	fmt.Println("haha network name", networkName)
+	fmt.Println("haha network name", networkName, nspid)
 
 	bridgeNetwork, err := GetNetwork(networkName)
 	if err != nil {
@@ -186,11 +185,11 @@ func addConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 
 	fmt.Println("haha", os.Getenv("PROCFS"))
 
-	if err = os.Symlink(filepath.Join(os.Getenv("PROCFS"), strconv.Itoa(nspid), "ns/net"),
-		filepath.Join("/var/run/netns", strconv.Itoa(nspid))); err != nil {
+	if err = os.Symlink(filepath.Join(os.Getenv("PROCFS"), nspid, "ns/net"),
+		filepath.Join("/var/run/netns", nspid)); err != nil {
 		return
 	}
-	fmt.Println("haha2", os.Getenv("PROCFS"))
+	fmt.Println("haha2", os.Getenv("PROCFS"), filepath.Join("/var/run/netns", nspid))
 
 	// Lock the OS Thread so we don't accidentally switch namespaces
 	runtime.LockOSThread()
@@ -203,7 +202,7 @@ func addConnection(nspid int, networkName string) (ovsConnection OvsConnection, 
 	fmt.Println("haha3")
 	defer origns.Close()
 
-	targetns, err := netns.GetFromName(strconv.Itoa(nspid))
+	targetns, err := netns.GetFromName(nspid)
 	if err != nil {
 		return
 	}

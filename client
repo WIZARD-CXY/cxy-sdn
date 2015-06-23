@@ -285,60 +285,25 @@ start_cxy-sdn() {
         return 1
     fi
 
-    #auto bind failed
     flags="--iface=eth1"
 
-    bstrap=manual
-    ps=no
-
     while true; do
-	args=$@
-	if [ "$args" = "" ]; then
-	    break
-	fi
-
-	case "$1" in
-	    unattended )
-		bstrap=auto
-		;;
-	    nopowerstrip )
-		ps=no
-		;;
-	    *)
-		log_fatal "Unknown option $1"
-	        ;;
-	esac
-	shift
+        read -p "Is this the first node in the cluster? (y/n)" yn
+        case $yn in
+            [Yy]* )
+                flags="$flags --bootstrap=true"
+                break
+                ;;
+            [Nn]* )
+                break
+                ;;
+            * )
+                echo "Please answer yes or no."
+                ;;
+        esac
     done
 
-    if [ "$bstrap" = "auto" ]; then
-        [ -z $BOOTSTRAP ] && log_fatal "BOOTSTRAP not set" && exit 1
-
-        if [ "$BOOTSTRAP" = "true" ] ; then
-            flags="$flags --bootstrap=true"
-        else
-            flags="$flags --bootstrap=false"
-        fi
-    else
-        while true; do
-            read -p "Is this the first node in the cluster? (y/n)" yn
-            case $yn in
-                [Yy]* )
-                    flags="$flags --bootstrap=true"
-                    break
-                    ;;
-                [Nn]* )
-                    break
-                    ;;
-                * )
-                    echo "Please answer yes or no."
-                    ;;
-            esac
-        done
-    fi
-
     cid=$(docker run -itd --privileged=true \
-        -v /etc/cxy-sdn/cxy-sdn.toml:/etc/cxy-sdn/cxy-sdn.toml \
 	-v /var/run/docker.sock:/var/run/docker.sock \
 	-v /usr/bin/docker:/usr/bin/docker -v /proc:/hostproc -e PROCFS=/hostproc \
 	--net=host wizardcxy/cxy-sdn /cxy-sdn $flags)
@@ -354,7 +319,7 @@ start_cxy-sdn() {
     echo $cid > /var/run/cxy-sdn/cid
 }
 
-stop_cxy-sdn_agent() {
+stop_cxy-sdn() {
     log_step "Stopping cxy-sdn Agent"
     if ! command_exists docker; then
         log_fatal "Docker is not installed, please run \"./cxy-sdn install\""
@@ -439,7 +404,7 @@ container_run() {
     cPid=$(docker inspect --format='{{ .State.Pid }}' $cid)
     cName=$(docker inspect --format='{{ .Name }}' $cid)
 
-    json=$(curl -s -X POST http://localhost:8888/connection -d "{ \"container_id\": \"$cid\", \"container_name\": \"$cName\", \"container_pid\": \"$cPid\", \"network\": \"$network\" }")
+    json=$(curl -s -X POST http://localhost:8888/connection -d "{ \"containerID\": \"$cid\", \"containerName\": \"$cName\", \"containerPID\": \"$cPid\", \"network\": \"$network\" }")
     result=$(echo $json | sed 's/[,{}]/\n/g' | sed 's/^".*":"\(.*\)"/\1/g' | awk -v RS="" '{ print $7, $8, $9, $10, $11 }')
 
     if [ "$attach" = "false" ]; then
@@ -633,21 +598,17 @@ case "$1" in
     cluster)
         shift
         case $1 in
-            bind)
-                shift
-                cluster_bind $@
-                ;;
-	    join)
-		shift
-		cluster_join $@
-		;;
+    	    join)
+    		shift
+    		cluster_join $@
+    		;;
             leave)
 	    	cluster_leave
-		;;
-	    *)
-                log_fatal "Unknown Command"
-                usage
-                exit 1
+    		;;
+    	    *)
+            log_fatal "Unknown Command"
+            usage
+            exit 1
         esac
         ;;
     network)
@@ -681,11 +642,11 @@ case "$1" in
                 start_cxy-sdn
                 ;;
             stop)
-                stop_cxy-sdn_agent
+                stop_cxy-sdn
                 ;;
             restart)
-                stop_cxy-sdn_image
-                start_cxy-sdn_image
+                stop_cxy-sdn
+                start_cxy-sdn
                 ;;
             logs)
                 shift 1
