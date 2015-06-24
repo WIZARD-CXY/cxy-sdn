@@ -16,7 +16,7 @@ import (
 const networkStore = "networkStore"
 const vlanStore = "vlanStore"
 const ipStore = "ipStore"
-const defaultNetwork = "default"
+const defaultNetwork = "cxy"
 
 var gatewayAddrs = []string{
 	// Here we don't follow the convention of using the 1st IP of the range for the gateway.
@@ -160,6 +160,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 func CreateDefaultNetwork() (*Network, error) {
 	subnet, err := GetAvailableSubnet()
+
 	if err != nil {
 		return &Network{}, err
 	}

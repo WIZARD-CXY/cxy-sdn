@@ -167,7 +167,7 @@ deps() {
     echo "....   Current:               $ARCH"
     echo ".... Operating System:         Ubuntu, Debian and Fedora"
     echo "....   Current:               $lsb_dist"
-    echo ".... Open vSwitch Version:     2.1 or higher"
+    echo ".... Open vSwitch Version:     2.3.1"
     echo "....   Current:               $OVS_SVER"
     echo ".. Docker Environment:"
     echo ".... Docker Server Version:   1.4 or higher"

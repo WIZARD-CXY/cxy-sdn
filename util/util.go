@@ -132,12 +132,11 @@ func SetInterfaceInNamespaceFd(name string, fd uintptr) error {
 }
 
 func SetDefaultGateway(ip, ifaceName string) error {
-	fmt.Println("haha set defaultGateway", ip, ifaceName)
 	iface, err := netlink.LinkByName(ifaceName)
 	if err != nil {
 		return err
 	}
-	fmt.Println("haha2 set defaultGateway", ip, ifaceName)
+
 	gw := net.ParseIP(ip)
 	if gw == nil {
 		return errors.New("Invalid gateway address")

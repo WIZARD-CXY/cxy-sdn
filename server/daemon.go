@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 )
 
 type Daemon struct {
@@ -50,7 +51,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	// start a goroutine to serve api
 	go ServeApi(d)
 
-	//start a gorouting to start netAgent
+	//start a gorouting to start agent
 	go func() {
 		d.bindInterface = ctx.String("iface")
 
@@ -59,24 +60,26 @@ func (d *Daemon) Run(ctx *cli.Context) {
 		if err := InitAgent(d.bindInterface, d.isBootstrap); err != nil {
 			fmt.Println("error in Init netAgent")
 		}
+
+		time.Sleep(3 * time.Second)
+		if d.isBootstrap {
+			d.readyChan <- true
+		}
 	}()
 
 	// start a goroutine
 	go nodeHandler(d)
 
 	go func() {
-		if !d.isBootstrap {
-			fmt.Println("None bootstrap node , wait for joining the cluster")
-			<-d.readyChan
-			fmt.Println("None bootstrap node , joined to the cluster")
-		}
-
 		if _, err := CreateBridge(); err != nil {
 			fmt.Println("Err in create ovs bridge", err.Error())
 		}
 
+		<-d.readyChan
+		fmt.Println("ready to work !")
+
 		if _, err := CreateDefaultNetwork(); err != nil {
-			fmt.Println("Create Default network error")
+			fmt.Println("Create Default network error", err.Error())
 		}
 	}()
 

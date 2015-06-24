@@ -319,6 +319,9 @@ func createConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	d.connectionChan <- ctx
 
 	res := <-ctx.Result
+	if res.OvsPortID == "-1" {
+		return &HttpErr{http.StatusBadRequest, "resp body not valid"}
+	}
 
 	data, _ := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

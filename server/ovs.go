@@ -119,7 +119,9 @@ func connHandler(d *Daemon) {
 			connDetail, err := addConnection(c.Connection.ContainerPID, c.Connection.Network)
 			if err != nil {
 				fmt.Printf("err is %+v\n", err)
-				return
+				c.Connection.OvsPortID = "-1"
+				c.Result <- c.Connection
+				continue
 			}
 			fmt.Printf("connDetails %v\n", connDetail)
 			c.Connection.OvsPortID = connDetail.Name
@@ -179,65 +181,56 @@ func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err 
 	if err = util.SetMtu(portName, mtu); err != nil {
 		return
 	}
-	if err = util.InterfaceUp(portName); err != nil {
+	/*if err = util.InterfaceUp(portName); err != nil {
 		return
-	}
-
-	fmt.Println("haha", os.Getenv("PROCFS"))
+	}*/
 
 	if err = os.Symlink(filepath.Join(os.Getenv("PROCFS"), nspid, "ns/net"),
 		filepath.Join("/var/run/netns", nspid)); err != nil {
 		return
 	}
-	fmt.Println("haha2", os.Getenv("PROCFS"), filepath.Join("/var/run/netns", nspid))
 
 	// Lock the OS Thread so we don't accidentally switch namespaces
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
+	// save the old netns
 	origns, err := netns.Get()
 	if err != nil {
 		return
 	}
-	fmt.Println("haha3")
+
 	defer origns.Close()
 
 	targetns, err := netns.GetFromName(nspid)
 	if err != nil {
 		return
 	}
-	fmt.Println("haha4")
+
 	defer targetns.Close()
 
+	// set port in targetns
 	if err = util.SetInterfaceInNamespaceFd(portName, uintptr(int(targetns))); err != nil {
 		return
 	}
-	fmt.Println("haha5")
 
+	// switch to targetns
 	if err = netns.Set(targetns); err != nil {
 		return
 	}
-	fmt.Println("haha6")
+
+	// Switch back to the original namespace
 	defer netns.Set(origns)
 
-	if err = util.InterfaceDown(portName); err != nil {
+	/*if err = util.InterfaceDown(portName); err != nil {
 		return
-	}
-	fmt.Println("haha7")
-
-	/* TODO : Find a way to change the interface name to defaultDevice (eth0).
-	   Currently using the Randomly created OVS port as is.
-	   refer to veth.go where one end of the veth pair is renamed to eth0
-	*/
-	if err = util.ChangeInterfaceName(portName, portName); err != nil {
-		return
-	}
+	}*/
 
 	if err = util.SetInterfaceIp(portName, ip.String()+subnetPrefix); err != nil {
 		return
 	}
 
-	if err = util.SetInterfaceMac(portName, generateMacAddr(ip).String()); err != nil {
+	if err = util.SetInterfaceMac(portName, mac); err != nil {
 		return
 	}
 	fmt.Println("haha8")
@@ -346,37 +339,39 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		iptables -A FORWARD -o %bridgeName -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 	*/
 
-	//glog.Infof("Setting up iptables")
+	fmt.Println("Setting up iptables")
 	natArgs := []string{"-t", "nat", "-A", "POSTROUTING", "-s", bridgeIP, "!", "-o", bridgeName, "-j", "MASQUERADE"}
 	output, err := installRule(natArgs...)
 	if err != nil {
-		//glog.Infof("Unable to enable network bridge NAT: %s", err)
+		fmt.Println("Unable to enable network bridge NAT:", err)
 		return fmt.Errorf("Unable to enable network bridge NAT: %s", err)
 	}
 	if len(output) != 0 {
-		//glog.Errorf("Error enabling network bridge NAT: %s", err)
+		fmt.Println("Error enabling network bridge NAT:", output)
 		return fmt.Errorf("Error enabling network bridge NAT: %s", output)
 	}
 
+	// TODO not enable -o other vlan gateway dev
+	// iptables -A FORWARD -i newBridge -o otherBridge -j DROP
 	outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "!", "-o", bridgeName, "-j", "ACCEPT"}
 	output, err = installRule(outboundArgs...)
 	if err != nil {
-		//glog.Errorf("Unable to enable network outbound forwarding: %s", err)
+		fmt.Println("Unable to enable network outbound forwarding:", err)
 		return fmt.Errorf("Unable to enable network outbound forwarding: %s", err)
 	}
 	if len(output) != 0 {
-		//glog.Errorf("Error enabling network outbound forwarding: %s", output)
+		fmt.Println("Error enabling network outbound forwarding:", output)
 		return fmt.Errorf("Error enabling network outbound forwarding: %s", output)
 	}
 
 	inboundArgs := []string{"-A", "FORWARD", "-o", bridgeName, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}
 	output, err = installRule(inboundArgs...)
 	if err != nil {
-		//glog.Errorf("Unable to enable network inbound forwarding: %s", err)
+		fmt.Println("Unable to enable network inbound forwarding:", err)
 		return fmt.Errorf("Unable to enable network inbound forwarding: %s", err)
 	}
 	if len(output) != 0 {
-		//glog.Errorf("Error enabling network inbound forwarding: %s")
+		fmt.Println("Error enabling network inbound forwarding:", output)
 		return fmt.Errorf("Error enabling network inbound forwarding: %s", output)
 	}
 	return nil
