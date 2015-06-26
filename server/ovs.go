@@ -332,11 +332,8 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		# Enable IP Masquerade on all ifaces that are not docker-ovs0
 		iptables -t nat -A POSTROUTING -s 10.1.42.1/16 ! -o %bridgeName -j MASQUERADE
 
-		# Enable outgoing connections on all interfaces
-		iptables -A FORWARD -i %bridgeName ! -o %bridgeName -j ACCEPT
-
-		# Enable incoming connections for established sessions
-		iptables -A FORWARD -o %bridgeName -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+		# disable outgoing connections on other vlan gateway
+		iptables -A FORWARD -i %bridgeName ! -o %oldGateway -j DROP
 	*/
 
 	fmt.Println("Setting up iptables")
@@ -351,29 +348,21 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		return fmt.Errorf("Error enabling network bridge NAT: %s", output)
 	}
 
-	// TODO not enable -o other vlan gateway dev
-	// iptables -A FORWARD -i newBridge -o otherBridge -j DROP
-	outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "!", "-o", bridgeName, "-j", "ACCEPT"}
-	output, err = installRule(outboundArgs...)
-	if err != nil {
-		fmt.Println("Unable to enable network outbound forwarding:", err)
-		return fmt.Errorf("Unable to enable network outbound forwarding: %s", err)
-	}
-	if len(output) != 0 {
-		fmt.Println("Error enabling network outbound forwarding:", output)
-		return fmt.Errorf("Error enabling network outbound forwarding: %s", output)
+	networks, _ := GetNetworks()
+	for _, network := range networks {
+		outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "-o", network.Name, "-j", "DROP"}
+		output, err = installRule(outboundArgs...)
+		if err != nil {
+			fmt.Println("Unable to disable network outbound forwarding:", err)
+			return fmt.Errorf("Unable to disable network outbound forwarding: %s", err)
+		}
+		if len(output) != 0 {
+			fmt.Println("Error disable network outbound forwarding:", output)
+			return fmt.Errorf("Error disable network outbound forwarding: %s", output)
+		}
+
 	}
 
-	inboundArgs := []string{"-A", "FORWARD", "-o", bridgeName, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}
-	output, err = installRule(inboundArgs...)
-	if err != nil {
-		fmt.Println("Unable to enable network inbound forwarding:", err)
-		return fmt.Errorf("Unable to enable network inbound forwarding: %s", err)
-	}
-	if len(output) != 0 {
-		fmt.Println("Error enabling network inbound forwarding:", output)
-		return fmt.Errorf("Error enabling network inbound forwarding: %s", output)
-	}
 	return nil
 }
 

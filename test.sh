@@ -1,6 +1,7 @@
 #!/bin/bash
 # simple test.sh when doing functional test
 
+set -e
 make build
 sudo ovs-vsctl --if-exists del-br ovs-br0
 echo y | sudo ./client agent restart
