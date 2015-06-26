@@ -78,8 +78,8 @@ func (d *Daemon) Run(ctx *cli.Context) {
 		<-d.readyChan
 		fmt.Println("ready to work !")
 
-		if _, err := CreateDefaultNetwork(); err != nil {
-			fmt.Println("Create Default network error", err.Error())
+		if _, err := CreateDefaultNetwork(d.isBootstrap); err != nil {
+			fmt.Println("Create cxy network error", err.Error())
 		}
 	}()
 

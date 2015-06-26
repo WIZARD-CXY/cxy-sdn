@@ -84,8 +84,8 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 	if err == nil {
 		//already exist
-		fmt.Printf("Network %s already exist\n", name)
-		return network, nil
+		fmt.Printf("Network %s already exist in store\n", name)
+		return network, errors.New("Network already exist")
 	}
 
 	// get the smallest unused vlan id from data store
@@ -158,13 +158,77 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 }
 
-func CreateDefaultNetwork() (*Network, error) {
+// this function is used to create network from network datastore
+// assume the network whose name is `name` is already exist but have no interface
+func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
+	network, err := GetNetwork(name)
+
+	if err != nil {
+		//not already exist
+		fmt.Printf("can't get %s in store, maybe communication err\n", name)
+		return network, errors.New("Network not exist")
+	}
+
+	// get the smallest unused vlan id from data store
+	vlanID := network.VlanID
+
+	gateway := network.Gateway
+
+	addr, err := util.GetIfaceAddr(name)
+
+	if err != nil {
+		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
+
+		if err = AddInternalPort(ovsClient, bridgeName, name, vlanID); err != nil {
+			return network, err
+		}
+		time.Sleep(1 * time.Second)
+
+		gatewayCIDR := &net.IPNet{net.ParseIP(gateway), subnet.Mask}
+
+		if err = util.SetMtu(name, mtu); err != nil {
+			return network, err
+		}
+
+		if err = util.SetInterfaceIp(name, gatewayCIDR.String()); err != nil {
+			return network, err
+		}
+
+		if err = util.InterfaceUp(name); err != nil {
+			return network, err
+		}
+
+	} else {
+		fmt.Printf("Interface %s already exists\n", name)
+		ifaceAddr := addr.String()
+
+		_, subnet, err = net.ParseCIDR(ifaceAddr)
+
+		if err != nil {
+			return nil, err
+		}
+		network = &Network{name, subnet.String(), gateway, vlanID}
+	}
+
+	if err = setupIPTables(network.Name, network.Subnet); err != nil {
+		return network, err
+	}
+
+	return network, nil
+
+}
+
+func CreateDefaultNetwork(isBootstrap bool) (*Network, error) {
 	subnet, err := GetAvailableSubnet()
 
 	if err != nil {
 		return &Network{}, err
 	}
-	return CreateNetwork(defaultNetwork, subnet)
+	if isBootstrap {
+		return CreateNetwork(defaultNetwork, subnet)
+	} else {
+		return CreateNetwork2(defaultNetwork, subnet)
+	}
 }
 
 func DeleteNetwork(name string) error {
