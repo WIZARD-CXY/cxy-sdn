@@ -17,6 +17,7 @@ type Daemon struct {
 	clusterChan    chan *NodeCtx
 	connectionChan chan *ConnectionCtx
 	readyChan      chan bool
+	Gateways       map[string]struct{}
 }
 
 type NodeCtx struct {
@@ -38,6 +39,7 @@ func NewDaemon() *Daemon {
 		make(chan *NodeCtx),
 		make(chan *ConnectionCtx),
 		make(chan bool),
+		make(map[string]struct{}, 50),
 	}
 }
 func (d *Daemon) Run(ctx *cli.Context) {
@@ -83,7 +85,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 			fmt.Println("Create cxy network error", err.Error())
 		}
 		if !d.isBootstrap {
-			syncNetwork()
+			syncNetwork(d)
 		}
 	}()
 

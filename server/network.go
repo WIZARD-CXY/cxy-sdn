@@ -251,7 +251,8 @@ func DeleteNetwork(name string) error {
 }
 
 // used for minion node to sync the network from network Store
-func syncNetwork() error {
+// ignore errors
+func syncNetwork(d *Daemon) {
 	//sync every 5 seconds
 	for {
 		networks, err := GetNetworks()
@@ -261,6 +262,7 @@ func syncNetwork() error {
 			continue
 		}
 
+		// add interface
 		for _, network := range networks {
 			_, err := util.GetIfaceAddr(network.Name)
 
@@ -288,7 +290,33 @@ func syncNetwork() error {
 					fmt.Println("interface up err in syncNetwork", network.Name)
 					continue
 				}
+				d.Gateways[network.Name] = struct{}{}
+
+				if err = setupIPTables(network.Name, network.Subnet); err != nil {
+					fmt.Println("iptable setup err in syncNetwork", network.Name)
+					continue
+				}
 				fmt.Println(network.Name + " network created")
+			}
+		}
+
+		//delete unused interface
+		var found bool
+		for k, _ := range d.Gateways {
+			found = false
+			for _, network := range networks {
+				if network.Name == k {
+					//find network in the datastore
+					found = true
+					break
+				}
+			}
+
+			// not found interface named k, delete it
+			if !found {
+				deletePort(ovsClient, bridgeName, k)
+				delete(d.Gateways, k)
+				fmt.Println("delete unused interface", k)
 			}
 		}
 		time.Sleep(5 * time.Second)
