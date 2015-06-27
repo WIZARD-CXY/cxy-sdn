@@ -250,6 +250,51 @@ func DeleteNetwork(name string) error {
 	return nil
 }
 
+// used for minion node to sync the network from network Store
+func syncNetwork() error {
+	//sync every 5 seconds
+	for {
+		networks, err := GetNetworks()
+		if err != nil {
+			fmt.Println("Error in getNetworks")
+			time.Sleep(3 * time.Second)
+			continue
+		}
+
+		for _, network := range networks {
+			_, err := util.GetIfaceAddr(network.Name)
+
+			if err != nil {
+				// network not exsit create the interface from net store
+				if err = AddInternalPort(ovsClient, bridgeName, network.Name, network.VlanID); err != nil {
+					fmt.Println("add internal port err in syncNetwork", network.Name)
+					continue
+				}
+				time.Sleep(1 * time.Second)
+
+				if err = util.SetMtu(network.Name, mtu); err != nil {
+					fmt.Println("set mtu err in syncNetwork", network.Name)
+					continue
+				}
+
+				_, subnet, _ := net.ParseCIDR(network.Subnet)
+				gatewayCIDR := &net.IPNet{net.ParseIP(network.Gateway), subnet.Mask}
+				if err = util.SetInterfaceIp(network.Name, gatewayCIDR.String()); err != nil {
+					fmt.Println("set ip err in syncNetwork", network.Name)
+					continue
+				}
+
+				if err = util.InterfaceUp(network.Name); err != nil {
+					fmt.Println("interface up err in syncNetwork", network.Name)
+					continue
+				}
+				fmt.Println(network.Name + " network created")
+			}
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
 func allocateVlan() (uint, error) {
 	vlanBytes, _, ok := netAgent.Get(vlanStore, "vlan")
 

@@ -280,7 +280,7 @@ install_docker() {
 start_cxy-sdn() {
     log_step "Starting the cxy-sdn container"
 
-    if [ -n "$(docker ps | grep wizardcxy/cxy-sdn | awk '{ print $1 }')" ]; then
+    if [ -n "$(docker ps | grep 10.10.103.215:5000/cxy-sdn | awk '{ print $1 }')" ]; then
         log_fatal "A cxy-sdn container is already running"
         return 1
     fi
@@ -306,7 +306,7 @@ start_cxy-sdn() {
     cid=$(docker run -itd --privileged=true \
 	-v /var/run/docker.sock:/var/run/docker.sock \
 	-v /usr/bin/docker:/usr/bin/docker -v /proc:/hostproc -e PROCFS=/hostproc \
-	--net=host wizardcxy/cxy-sdn /cxy-sdn $flags)
+	--net=host 10.10.103.215:5000/cxy-sdn /cxy-sdn $flags)
 
     if [ -n "$cid" ]; then
         log_info "A cxy-sdn container was started" | indent
@@ -326,7 +326,7 @@ stop_cxy-sdn() {
         exit 1
     fi
 
-    for CID in $(docker ps | grep wizardcxy/cxy-sdn | awk '{ print $1; }'); do
+    for CID in $(docker ps | grep 10.10.103.215:5000/cxy-sdn | awk '{ print $1; }'); do
         log_info "Stopping the cxy-sdn container $CID" | indent
         docker rm -f ${CID} > /dev/null
     done
@@ -343,7 +343,7 @@ remove_cxy-sdn() {
         exit 1
     fi
 
-    for CID in $(docker ps -a | grep wizardcxy/cxy-sdn | awk '{ print $1; }'); do
+    for CID in $(docker ps -a | grep 10.10.103.215:5000/cxy-sdn | awk '{ print $1; }'); do
         log_info "Stopping cxy-sdn container: $CID" | indent
         docker stop $CID > /dev/null
         sleep 1

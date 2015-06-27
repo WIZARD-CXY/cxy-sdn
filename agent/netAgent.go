@@ -216,7 +216,6 @@ func GetAll(store string) ([][]byte, []int, bool) {
 	if err != nil {
 		glog.Infof("Error in Get all KV %v", store)
 	}
-	fmt.Printf("Status of Get %s for %s\n", resp.Status, url)
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		var jsonBody []KVRespBody

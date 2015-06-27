@@ -75,14 +75,19 @@ func (d *Daemon) Run(ctx *cli.Context) {
 			fmt.Println("Err in create ovs bridge", err.Error())
 		}
 
+		//wait data store backend ready
 		<-d.readyChan
 		fmt.Println("ready to work !")
 
 		if _, err := CreateDefaultNetwork(d.isBootstrap); err != nil {
 			fmt.Println("Create cxy network error", err.Error())
 		}
+		if !d.isBootstrap {
+			syncNetwork()
+		}
 	}()
 
+	//start a goroutine to manage connection
 	go connHandler(d)
 
 	sig_chan := make(chan os.Signal, 1)
