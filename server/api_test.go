@@ -428,6 +428,61 @@ func TestCreateConnNoNetwork(t *testing.T) {
 	}
 }
 
+func TestCreateConnWithIP(t *testing.T) {
+	d := NewDaemon()
+	connection := &Connection{
+		ContainerID:   "abc123",
+		ContainerName: "test_container",
+		ContainerPID:  "1234",
+		Network:       "",
+		RequestIp:     "10.10.10.10",
+	}
+	expected := &Connection{
+		ContainerID:   "abc123",
+		ContainerName: "test_container",
+		ContainerPID:  "1234",
+		Network:       "default",
+		RequestIp:     "10.10.10.10",
+	}
+
+	data, _ := json.Marshal(connection)
+	request, _ := http.NewRequest("POST", "/connection", bytes.NewReader(data))
+	response := httptest.NewRecorder()
+
+	go func() {
+		for {
+			context := <-d.connectionChan
+			if context == nil {
+				t.Fatalf("Object taken from channel is nil")
+			}
+			if context.Action != addConn {
+				t.Fatal("should be adding a new connection")
+			}
+
+			if !reflect.DeepEqual(context.Connection, expected) {
+				t.Fatal("payload is incorrect")
+			}
+			context.Result <- expected
+		}
+	}()
+
+	createRouter(d).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("Expected %v:\n\tReceived: %v:\n\t%v", "200", response.Code, response.Body)
+	}
+
+	expectedBody, _ := json.Marshal(expected)
+	if !bytes.Equal(expectedBody, response.Body.Bytes()) {
+		t.Fatalf("body is not correct")
+	}
+
+	contentHeader := response.HeaderMap["Content-Type"]
+	if contentHeader[0] != "application/json; charset=utf-8" {
+		t.Fatal("headers not correctly set")
+	}
+}
+
 func TestCreateConnNoBody(t *testing.T) {
 	d := NewDaemon()
 	request, _ := http.NewRequest("POST", "/connection", nil)

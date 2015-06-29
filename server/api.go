@@ -42,6 +42,7 @@ type Connection struct {
 	ContainerID      string        `json:"containerID"`
 	ContainerName    string        `json:"containerName"`
 	ContainerPID     string        `json:"containerPID"`
+	RequestIp        string        `json:"requestIP,omitempty"`
 	Network          string        `json:"network"`
 	OvsPortID        string        `json:"ovsPortID"`
 	ConnectionDetail OvsConnection `json:"ovs_connectionDetails"`

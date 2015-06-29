@@ -63,14 +63,14 @@ func nodeHandler(d *Daemon) {
 
 func (l Listener) NotifyNodeUpdate(nType netAgent.NotifyUpdateType, nodeAddr string) {
 	if nType == netAgent.NOTIFY_UPDATE_ADD {
-		// glog.Infof("New node %s joined in", nodeAddr)
+		fmt.Println(nodeAddr, "node joined in")
 		myIp, _ := util.MyIP()
 		if nodeAddr != myIp {
 			// add tunnel to the other node
 			AddPeer(nodeAddr)
 		}
 	} else if nType == netAgent.NOTIFY_UPDATE_DELETE {
-		// glog.Infof("Node %s left", nodeAddr)
+		fmt.Println(nodeAddr, "is leaving, removing tunnel")
 		DeletePeer(nodeAddr)
 	}
 }

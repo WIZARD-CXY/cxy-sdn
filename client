@@ -385,8 +385,14 @@ info() {
 
 container_run() {
     network=""
-    if [ $1 = '-n' ]; then
+    requestIp=""
+    if [ $1 == '-n' ]; then
         network=$2
+        shift 2
+    fi
+
+    if [ $1 == "-z" ]; then
+        requestIp=$2
         shift 2
     fi
 
@@ -404,7 +410,7 @@ container_run() {
     cPid=$(docker inspect --format='{{ .State.Pid }}' $cid)
     cName=$(docker inspect --format='{{ .Name }}' $cid)
 
-    json=$(curl -s -X POST http://localhost:8888/connection -d "{ \"containerID\": \"$cid\", \"containerName\": \"$cName\", \"containerPID\": \"$cPid\", \"network\": \"$network\" }")
+    json=$(curl -s -X POST http://localhost:8888/connection -d "{ \"containerID\": \"$cid\", \"containerName\": \"$cName\", \"requestIP\": \"$requestIp\", \"containerPID\": \"$cPid\", \"network\": \"$network\" }")
     result=$(echo $json | sed 's/[,{}]/\n/g' | sed 's/^".*":"\(.*\)"/\1/g' | awk -v RS="" '{ print $7, $8, $9, $10, $11 }')
 
     if [ "$attach" = "false" ]; then

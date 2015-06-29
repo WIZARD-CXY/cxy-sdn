@@ -116,7 +116,7 @@ func connHandler(d *Daemon) {
 
 		switch c.Action {
 		case addConn:
-			connDetail, err := addConnection(c.Connection.ContainerPID, c.Connection.Network)
+			connDetail, err := addConnection(c.Connection.ContainerPID, c.Connection.Network, c.Connection.RequestIp)
 			if err != nil {
 				fmt.Printf("err is %+v\n", err)
 				c.Connection.OvsPortID = "-1"
@@ -136,7 +136,7 @@ func connHandler(d *Daemon) {
 	}
 }
 
-func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err error) {
+func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConnection, err error) {
 	var (
 		bridge = bridgeName
 		prefix = "ovs"
@@ -169,7 +169,16 @@ func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err 
 
 	_, subnet, _ := net.ParseCIDR(bridgeNetwork.Subnet)
 
-	ip := RequestIP(*subnet)
+	var ip net.IP
+	if requestIp == "" {
+		// if not request a static ip, using system auto-choose
+		ip = RequestIP(*subnet)
+	} else {
+		// if request ip, mark it as used and use it
+		ip = net.ParseIP(requestIp)
+		MarkUsed(ip, *subnet)
+	}
+
 	fmt.Println("newIP is", ip)
 	mac := generateMacAddr(ip).String()
 
@@ -177,13 +186,6 @@ func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err 
 	subnetPrefix := subnetString[len(subnetString)-3 : len(subnetString)]
 
 	ovsConnection = OvsConnection{portName, ip.String(), subnetPrefix, mac, bridgeNetwork.Gateway}
-
-	if err = util.SetMtu(portName, mtu); err != nil {
-		return
-	}
-	/*if err = util.InterfaceUp(portName); err != nil {
-		return
-	}*/
 
 	if err = os.Symlink(filepath.Join(os.Getenv("PROCFS"), nspid, "ns/net"),
 		filepath.Join("/var/run/netns", nspid)); err != nil {
@@ -211,6 +213,7 @@ func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err 
 
 	// set port in targetns
 	if err = util.SetInterfaceInNamespaceFd(portName, uintptr(int(targetns))); err != nil {
+		fmt.Println("Set port in ns err in addcon")
 		return
 	}
 
@@ -219,14 +222,16 @@ func addConnection(nspid, networkName string) (ovsConnection OvsConnection, err 
 		return
 	}
 
-	// Switch back to the original namespace
+	// In the end switch back to the original namespace
 	defer netns.Set(origns)
 
-	/*if err = util.InterfaceDown(portName); err != nil {
+	if err = util.SetMtu(portName, mtu); err != nil {
+		fmt.Println("set mtu error in addCon")
 		return
-	}*/
+	}
 
 	if err = util.SetInterfaceIp(portName, ip.String()+subnetPrefix); err != nil {
+		fmt.Println("SetInterfaceip error in addcon")
 		return
 	}
 

@@ -208,7 +208,7 @@ func GetIfaceForRoute(address string) (string, error) {
 }
 
 // set the given bit, 0 index based
-func set(a []byte, k uint32) {
+func Set(a []byte, k uint32) {
 	a[k/8] |= 1 << (k % 8)
 }
 
@@ -230,7 +230,7 @@ func TestAndSet(a []byte) uint32 {
 
 	for i = 0; i < uint32(len(a)*8); i++ {
 		if !test(a, i) {
-			set(a, i)
+			Set(a, i)
 			return i + 1
 		}
 	}

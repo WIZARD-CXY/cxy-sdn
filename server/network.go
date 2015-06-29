@@ -455,6 +455,40 @@ func RequestIP(subnet net.IPNet) net.IP {
 
 }
 
+//  Mark a specified ip as used, return trus as success
+func MarkUsed(addr net.IP, subnet net.IPNet) bool {
+	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
+
+	if !ok {
+		return false
+	}
+
+	newArray := make([]byte, len(oldArray))
+	copy(newArray, oldArray)
+
+	var num1, num2 uint32
+
+	buf1 := bytes.NewBuffer(addr.To4())
+	binary.Read(buf1, binary.BigEndian, &num1)
+
+	buf := bytes.NewBuffer(subnet.IP)
+
+	binary.Read(buf, binary.BigEndian, &num2)
+
+	pos := uint32(num1 - num2 - 1)
+
+	util.Set(newArray, pos)
+
+	err2 := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
+
+	if err2 == netAgent.OUTDATED {
+		return ReleaseIP(addr, subnet)
+	}
+
+	return true
+
+}
+
 // Release the given IP from the subnet
 func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
 	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
