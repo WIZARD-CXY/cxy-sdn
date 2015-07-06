@@ -102,7 +102,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	if err != nil {
 		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
 
-		gateway = RequestIP(*subnet)
+		gateway = RequestIP(fmt.Sprint(vlanID), *subnet)
 		network = &Network{name, subnet.String(), gateway.String(), vlanID}
 
 		if err = AddInternalPort(ovsClient, bridgeName, name, vlanID); err != nil {
@@ -402,10 +402,10 @@ func GetAvailableSubnet() (subnet *net.IPNet, err error) {
 }
 
 // ipStore manage the cluster ip resource
-// key is the subnet, value is the available ip address bytes
+// key is the vlan/subnet, value is the available ip address bytes
 
-// Get an IP from the subnet and mark it as used
-func RequestIP(subnet net.IPNet) net.IP {
+// Get an IP from the unused subnet and mark it as used
+func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 	ipCount := util.IPCount(subnet)
 	bc := int(ipCount / 8)
 	partial := int(math.Mod(ipCount, float64(8)))
@@ -414,7 +414,7 @@ func RequestIP(subnet net.IPNet) net.IP {
 		bc += 1
 	}
 
-	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
+	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
 
 	if !ok {
 		oldArray = make([]byte, bc)
@@ -426,10 +426,10 @@ func RequestIP(subnet net.IPNet) net.IP {
 
 	pos := util.TestAndSet(newArray)
 
-	err := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
+	err := netAgent.Put(ipStore, vlanID+"-"+subnet.String(), newArray, oldArray)
 
 	if err == netAgent.OUTDATED {
-		return RequestIP(subnet)
+		return RequestIP(vlanID, subnet)
 	}
 
 	var num uint32

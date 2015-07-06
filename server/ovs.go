@@ -172,7 +172,7 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 	var ip net.IP
 	if requestIp == "" {
 		// if not request a static ip, using system auto-choose
-		ip = RequestIP(*subnet)
+		ip = RequestIP(fmt.Sprint(bridgeNetwork.VlanID), *subnet)
 	} else {
 		// if request ip, mark it as used and use it
 		ip = net.ParseIP(requestIp)
@@ -236,16 +236,17 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 	}
 
 	if err = util.SetInterfaceMac(portName, mac); err != nil {
+		fmt.Println("SetInterfacemac error in addcon")
 		return
 	}
-	fmt.Println("haha8")
 
 	if err = util.InterfaceUp(portName); err != nil {
+		fmt.Println("Interfaceup error in addcon")
 		return
 	}
-	fmt.Println("haha9")
 
 	if err = util.SetDefaultGateway(bridgeNetwork.Gateway, portName); err != nil {
+		fmt.Println("SetdefaultGateway error in addcon")
 		return
 	}
 
@@ -334,7 +335,8 @@ func generateMacAddr(ip net.IP) net.HardwareAddr {
 
 func setupIPTables(bridgeName string, bridgeIP string) error {
 	/*
-		# Enable IP Masquerade on all ifaces that are not docker-ovs0
+		# Enable IP Masquerade on all ifaces that are not bridgeName
+		# TO-DO need only one trunk interface as gw for per host only masquerade on that ip
 		iptables -t nat -A POSTROUTING -s 10.1.42.1/16 ! -o %bridgeName -j MASQUERADE
 
 		# disable outgoing connections on other vlan gateway

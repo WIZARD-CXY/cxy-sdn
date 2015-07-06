@@ -4,7 +4,7 @@ go:
   - 1.4
   - tip
 
-script: make
+script: make test
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq openvswitch-common

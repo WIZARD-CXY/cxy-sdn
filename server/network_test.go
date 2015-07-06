@@ -87,7 +87,7 @@ func TestRequestandReleaseIP(t *testing.T) {
 	_, ipNet, _ := net.ParseCIDR("192.168.0.0/16")
 
 	for i := 1; i <= TestCount; i++ {
-		addr := RequestIP(*ipNet)
+		addr := RequestIP("1", *ipNet)
 		addr = addr.To4()
 		if addr == nil || i%256 != int(addr[3]) || i/256 != int(addr[2]) {
 			t.Error(addr.String(), "is wrong")
@@ -104,12 +104,12 @@ func TestRequestandReleaseIP(t *testing.T) {
 		t.Error("Release 192.168.0.2 failed")
 	}
 
-	addr := RequestIP(*ipNet).To4()
+	addr := RequestIP("1", *ipNet).To4()
 	if int(addr[3]) != 1 {
 		t.Error(addr.String())
 	}
 
-	addr = RequestIP(*ipNet).To4()
+	addr = RequestIP("1", *ipNet).To4()
 
 	if int(addr[3]) != 2 {
 		t.Error(addr.String())
