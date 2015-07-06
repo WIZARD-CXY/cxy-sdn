@@ -46,6 +46,11 @@ type Network struct {
 	Gateway string `json:"gateway"`
 	VlanID  uint   `json:"vlanid"`
 }
+type QosCtx struct {
+	Action int
+	bw     int
+	delay  int
+}
 
 // get the network detail of a given name
 func GetNetwork(name string) (*Network, error) {

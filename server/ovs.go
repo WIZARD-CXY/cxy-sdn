@@ -407,3 +407,21 @@ func (n notifier) Echo([]interface{}) {
 func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
 	fmt.Println("OVS Disconnected. Retrying...")
 }
+
+func addQos(containerId, bw, delay string) error {
+	// use tc command to set container egress bw and delay
+}
+
+func installQos(args ...string) ([]byte, error) {
+	path, err := exec.LookPath("tc")
+	if err != nil {
+		return nil, errors.New("tc not found")
+	}
+
+	output, err := exec.Command(path, args...).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("tc failed: tc %v: %s (%s)", strings.Join(args, " "), output, err)
+	}
+
+	return output, err
+}

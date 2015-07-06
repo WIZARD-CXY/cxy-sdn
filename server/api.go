@@ -75,7 +75,7 @@ func createRouter(d *Daemon) *mux.Router {
 			"/cluster/join":  joinCluster,
 			"/cluster/leave": leaveCluster,
 			"/connection":    createConn,
-			//"/qos/{id:.*}/":  createQos,
+			"/qos/{id:.*}/":  createQos,
 		},
 		/*"PUT": {
 			"/qos/{id:.}/": updateQos,
@@ -352,36 +352,23 @@ func delConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	return nil
 }
 
-/*// create a qos for a container
+// create a qos for a container
 func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
-	con := &Connection{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(con)
+	bw := r.FormValue("bw")
+	delay := r.FormValue("delay")
 
-	if err != nil {
-		return &HttpErr{http.StatusInternalServerError, err.Error()}
+	vars := mux.Vars(r)
+	containerId := vars["id"]
+
+	if bw == "" && delay == "" {
+		return &HttpErr{http.StatusBadRequest, err.Error()}
 	}
 
-	if con.Network == "" {
-		con.Network = defaultNetwork
-	}
-
-	ctx := &ConnectionCtx{
-		addConn,
-		con,
-		make(chan *Connection),
-	}
-
-	d.connectionChan <- ctx
-
-	res := <-ctx.Result
-	if res.OvsPortID == "-1" {
-		return &HttpErr{http.StatusBadRequest, "resp body not valid"}
-	}
+	addQos(containerId, bw, delay)
 
 	data, _ := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(data)
 
 	return nil
-}*/
+}
