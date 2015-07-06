@@ -12,7 +12,7 @@ import (
 type Daemon struct {
 	bridgeConf     *BridgeConf
 	isBootstrap    bool
-	connections    map[string]*Connection
+	connections    map[string]*Connection // each connection is a connected container, key is containerID
 	bindInterface  string
 	clusterChan    chan *NodeCtx
 	connectionChan chan *ConnectionCtx

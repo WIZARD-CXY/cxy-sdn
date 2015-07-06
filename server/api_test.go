@@ -308,6 +308,8 @@ func TestGetConn(t *testing.T) {
 		ContainerName: "test_container",
 		ContainerPID:  "1234",
 		Network:       "default",
+		BandWidth:     "500",
+		Delay:         "100",
 	}
 	d.connections["abc123"] = connection
 	request, _ := http.NewRequest("GET", "/connection/abc123", nil)
@@ -387,7 +389,7 @@ func TestCreateConnNoNetwork(t *testing.T) {
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
 		ContainerPID:  "1234",
-		Network:       "default",
+		Network:       "cxy",
 	}
 
 	data, _ := json.Marshal(connection)
@@ -441,7 +443,7 @@ func TestCreateConnWithIP(t *testing.T) {
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
 		ContainerPID:  "1234",
-		Network:       "default",
+		Network:       "cxy",
 		RequestIp:     "10.10.10.10",
 	}
 
@@ -567,3 +569,80 @@ func TestDeleteConn(t *testing.T) {
 	}
 
 }
+
+// Qos test
+func TestCreateQos(t *testing.T) {
+	d := NewDaemon()
+	connection := &Connection{
+		ContainerID:   "abc123",
+		ContainerName: "test_container",
+		ContainerPID:  "1234",
+		Network:       "default",
+		BandWidth:     "500",
+		Delay:         "100",
+	}
+	d.connections["abc123"] = connection
+	request, _ := http.NewRequest("POST", "/qos/abc123?bw=500&delay=100", nil)
+	response := httptest.NewRecorder()
+
+	go func() {
+		for {
+			context := <-d.connectionChan
+			if context == nil {
+				t.Fatalf("Object taken from channel is nil")
+			}
+			if context.Action != deleteConn {
+				t.Fatal("should be adding a new connection")
+			}
+
+			if !reflect.DeepEqual(context.Connection, connection) {
+				t.Fatal("payload is incorrect")
+			}
+			context.Result <- connection
+		}
+	}()
+
+	createRouter(d).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
+	}
+
+}
+
+/*
+func TestUpdateQos(t *testing.T) {
+	d := NewDaemon()
+	connection := &Connection{
+		ContainerID:   "abc123",
+		ContainerName: "test_container",
+		ContainerPID:  "1234",
+		Network:       "default",
+	}
+	d.connections["abc123"] = connection
+	request, _ := http.NewRequest("DELETE", "/connection/abc123", nil)
+	response := httptest.NewRecorder()
+
+	go func() {
+		for {
+			context := <-d.connectionChan
+			if context == nil {
+				t.Fatalf("Object taken from channel is nil")
+			}
+			if context.Action != deleteConn {
+				t.Fatal("should be adding a new connection")
+			}
+
+			if !reflect.DeepEqual(context.Connection, connection) {
+				t.Fatal("payload is incorrect")
+			}
+			context.Result <- connection
+		}
+	}()
+
+	createRouter(d).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
+	}
+}*/

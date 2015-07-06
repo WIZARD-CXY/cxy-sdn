@@ -129,7 +129,7 @@ func connHandler(d *Daemon) {
 			d.connections[c.Connection.ContainerID] = c.Connection
 			c.Result <- c.Connection
 		case deleteConn:
-			DeleteConnection(c.Connection.ConnectionDetail)
+			DeleteConnection(c.Connection.ConnectionDetail, c.Connection.Network)
 			delete(d.connections, c.Connection.ContainerID)
 			c.Result <- c.Connection
 		}
@@ -275,14 +275,20 @@ func populateContextCache() {
 	}
 }
 
-func DeleteConnection(connection OvsConnection) error {
+func DeleteConnection(connection OvsConnection, networkName string) error {
 	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
 	deletePort(ovsClient, bridgeName, connection.Name)
 	ip := net.ParseIP(connection.Ip)
 	_, subnet, _ := net.ParseCIDR(connection.Ip + connection.Subnet)
-	ReleaseIP(ip, *subnet)
+
+	bridgeNetwork, err := GetNetwork(networkName)
+	if err != nil {
+		return err
+	}
+
+	ReleaseIP(ip, *subnet, fmt.Sprint(bridgeNetwork.VlanID))
 	return nil
 }
 

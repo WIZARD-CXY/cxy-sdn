@@ -146,7 +146,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 	if err2 == netAgent.OUTDATED {
 		releaseVlan(vlanID)
-		ReleaseIP(gateway, *subnet)
+		ReleaseIP(gateway, *subnet, fmt.Sprint(vlanID))
 		return CreateNetwork(name, subnet)
 	}
 
@@ -482,16 +482,16 @@ func MarkUsed(addr net.IP, subnet net.IPNet) bool {
 	err2 := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
 
 	if err2 == netAgent.OUTDATED {
-		return ReleaseIP(addr, subnet)
+		MarkUsed(addr, subnet)
 	}
 
 	return true
 
 }
 
-// Release the given IP from the subnet
-func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
-	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
+// Release the given IP from the subnet of vlan
+func ReleaseIP(addr net.IP, subnet net.IPNet, vlanID string) bool {
+	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
 
 	if !ok {
 		return false
@@ -513,10 +513,10 @@ func ReleaseIP(addr net.IP, subnet net.IPNet) bool {
 
 	util.Clear(newArray, pos)
 
-	err2 := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
+	err2 := netAgent.Put(ipStore, vlanID+"-"+subnet.String(), newArray, oldArray)
 
 	if err2 == netAgent.OUTDATED {
-		return ReleaseIP(addr, subnet)
+		return ReleaseIP(addr, subnet, vlanID)
 	}
 
 	return true

@@ -94,13 +94,13 @@ func TestRequestandReleaseIP(t *testing.T) {
 		}
 	}
 
-	if !ReleaseIP(net.ParseIP("192.168.0.1"), *ipNet) {
+	if !ReleaseIP(net.ParseIP("192.168.0.1"), *ipNet, "1") {
 		t.Error("Release 192.168.0.1 failed")
 	}
-	if !ReleaseIP(net.ParseIP("192.168.0.4"), *ipNet) {
+	if !ReleaseIP(net.ParseIP("192.168.0.4"), *ipNet, "1") {
 		t.Error("Release 192.168.0.4 failed")
 	}
-	if !ReleaseIP(net.ParseIP("192.168.0.2"), *ipNet) {
+	if !ReleaseIP(net.ParseIP("192.168.0.2"), *ipNet, "1") {
 		t.Error("Release 192.168.0.2 failed")
 	}
 

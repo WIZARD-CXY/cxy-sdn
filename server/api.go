@@ -45,6 +45,8 @@ type Connection struct {
 	RequestIp        string        `json:"requestIP,omitempty"`
 	Network          string        `json:"network"`
 	OvsPortID        string        `json:"ovsPortID"`
+	BandWidth        string        `json:"bandWidth,omitempty"`
+	Delay            string        `json:"delay,omitempty"`
 	ConnectionDetail OvsConnection `json:"ovs_connectionDetails"`
 }
 
@@ -73,7 +75,11 @@ func createRouter(d *Daemon) *mux.Router {
 			"/cluster/join":  joinCluster,
 			"/cluster/leave": leaveCluster,
 			"/connection":    createConn,
+			//"/qos/{id:.*}/":  createQos,
 		},
+		/*"PUT": {
+			"/qos/{id:.}/": updateQos,
+		},*/
 		"DELETE": {
 			"/network/{name:.*}":  delNet,
 			"/connection/{id:.*}": delConn,
@@ -122,15 +128,6 @@ func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	}
 
 	d.bridgeConf = cfg
-	return nil
-}
-
-// get all the connections
-func getCons(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
-	data, _ := json.Marshal(d.connections)
-	w.Header().Set("Content-type", "application/json; charset=utf-8")
-	w.Write(data)
-
 	return nil
 }
 
@@ -320,6 +317,7 @@ func createConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	d.connectionChan <- ctx
 
 	res := <-ctx.Result
+
 	if res.OvsPortID == "-1" {
 		return &HttpErr{http.StatusBadRequest, "resp body not valid"}
 	}
@@ -353,3 +351,37 @@ func delConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 
 	return nil
 }
+
+/*// create a qos for a container
+func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
+	con := &Connection{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(con)
+
+	if err != nil {
+		return &HttpErr{http.StatusInternalServerError, err.Error()}
+	}
+
+	if con.Network == "" {
+		con.Network = defaultNetwork
+	}
+
+	ctx := &ConnectionCtx{
+		addConn,
+		con,
+		make(chan *Connection),
+	}
+
+	d.connectionChan <- ctx
+
+	res := <-ctx.Result
+	if res.OvsPortID == "-1" {
+		return &HttpErr{http.StatusBadRequest, "resp body not valid"}
+	}
+
+	data, _ := json.Marshal(res)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Write(data)
+
+	return nil
+}*/
