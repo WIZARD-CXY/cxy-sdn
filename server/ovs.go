@@ -410,6 +410,7 @@ func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
 
 func addQos(containerId, bw, delay string) error {
 	// use tc command to set container egress bw and delay
+	return nil
 }
 
 func installQos(args ...string) ([]byte, error) {

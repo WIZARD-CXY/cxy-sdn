@@ -571,41 +571,29 @@ func TestDeleteConn(t *testing.T) {
 }
 
 // Qos test
-func TestCreateQos(t *testing.T) {
+func TestCreateQosApi(t *testing.T) {
 	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
 		ContainerName: "test_container",
 		ContainerPID:  "1234",
 		Network:       "default",
-		BandWidth:     "500",
-		Delay:         "100",
+		BandWidth:     "",
+		Delay:         "",
 	}
 	d.connections["abc123"] = connection
+
 	request, _ := http.NewRequest("POST", "/qos/abc123?bw=500&delay=100", nil)
 	response := httptest.NewRecorder()
-
-	go func() {
-		for {
-			context := <-d.connectionChan
-			if context == nil {
-				t.Fatalf("Object taken from channel is nil")
-			}
-			if context.Action != deleteConn {
-				t.Fatal("should be adding a new connection")
-			}
-
-			if !reflect.DeepEqual(context.Connection, connection) {
-				t.Fatal("payload is incorrect")
-			}
-			context.Result <- connection
-		}
-	}()
 
 	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
+	}
+
+	if d.connections["abc123"].BandWidth != "500" || d.connections["abc123"].Delay != "100" {
+		t.Fatal("TestCreateQosApi error")
 	}
 
 }

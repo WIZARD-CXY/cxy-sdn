@@ -5,11 +5,6 @@ go:
   - tip
 
 script: make test
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq openvswitch-common
-  - sudo apt-get install -qq openvswitch-switch
-  - sudo ovs-vsctl set-manager tcp:127.0.0.1:6640
 install:   
   - go get github.com/codegangsta/cli
   - go get github.com/golang/glog

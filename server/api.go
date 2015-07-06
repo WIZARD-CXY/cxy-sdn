@@ -75,7 +75,7 @@ func createRouter(d *Daemon) *mux.Router {
 			"/cluster/join":  joinCluster,
 			"/cluster/leave": leaveCluster,
 			"/connection":    createConn,
-			"/qos/{id:.*}/":  createQos,
+			"/qos/{id:.*}":   createQos,
 		},
 		/*"PUT": {
 			"/qos/{id:.}/": updateQos,
@@ -361,14 +361,20 @@ func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	containerId := vars["id"]
 
 	if bw == "" && delay == "" {
-		return &HttpErr{http.StatusBadRequest, err.Error()}
+		return &HttpErr{http.StatusBadRequest, "bw and delay is empty"}
 	}
 
-	addQos(containerId, bw, delay)
+	if err := addQos(containerId, bw, delay); err != nil {
+		return &HttpErr{http.StatusInternalServerError, err.Error()}
+	}
 
-	data, _ := json.Marshal(res)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Write(data)
+	con, ok := d.connections[containerId]
+
+	if !ok {
+		return &HttpErr{http.StatusNotFound, "container not found"}
+	}
+	con.BandWidth = bw
+	con.Delay = delay
 
 	return nil
 }
