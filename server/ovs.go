@@ -408,8 +408,46 @@ func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
 	fmt.Println("OVS Disconnected. Retrying...")
 }
 
-func addQos(containerId, bw, delay string) error {
+func addQos(d *Daemon, containerId, bw, delay string) error {
 	// use tc command to set container egress bw and delay
+	// this command is set in the container ns
+
+	con, _ := d.connections[containerId]
+
+	// Lock the OS Thread so we don't accidentally switch namespaces
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// save the old netns
+	origns, err := netns.Get()
+	if err != nil {
+		return err
+	}
+
+	defer origns.Close()
+
+	targetns, err := netns.GetFromName(con.ContainerPID)
+	if err != nil {
+		return err
+	}
+
+	defer targetns.Close()
+
+	// switch to targetns
+	if err = netns.Set(targetns); err != nil {
+		return err
+	}
+
+	// In the end switch back to the original namespace
+	defer netns.Set(origns)
+
+	args := []string{"qdisc", "add", "dev", con.OvsPortID, "root", "netem", "delay", delay}
+	fmt.Println(args)
+	if _, err = installQos(args...); err != nil {
+		fmt.Println("install qos error in addQos")
+		return err
+	}
+
 	return nil
 }
 

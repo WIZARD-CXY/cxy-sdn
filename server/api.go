@@ -364,15 +364,16 @@ func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 		return &HttpErr{http.StatusBadRequest, "bw and delay is empty"}
 	}
 
-	if err := addQos(containerId, bw, delay); err != nil {
-		return &HttpErr{http.StatusInternalServerError, err.Error()}
-	}
-
 	con, ok := d.connections[containerId]
 
 	if !ok {
 		return &HttpErr{http.StatusNotFound, "container not found"}
 	}
+
+	if err := addQos(d, containerId, bw, delay); err != nil {
+		return &HttpErr{http.StatusInternalServerError, err.Error()}
+	}
+
 	con.BandWidth = bw
 	con.Delay = delay
 
