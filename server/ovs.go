@@ -410,6 +410,86 @@ func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
 
 func addQos(d *Daemon, containerId, bw, delay string) error {
 	// use tc command to set container egress bw and delay
+	// this command runs in the container ns
+
+	con, _ := d.connections[containerId]
+
+	// Lock the OS Thread so we don't accidentally switch namespaces
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// save the old netns
+	origns, err := netns.Get()
+	if err != nil {
+		return err
+	}
+
+	defer origns.Close()
+
+	targetns, err := netns.GetFromName(con.ContainerPID)
+	if err != nil {
+		return err
+	}
+
+	defer targetns.Close()
+
+	// switch to targetns
+	if err = netns.Set(targetns); err != nil {
+		return err
+	}
+
+	// In the end switch back to the original namespace
+	defer netns.Set(origns)
+
+	// delay is root qdisc
+	if delay != "" {
+		// unit is ms
+		args := []string{"qdisc", "add", "dev", con.OvsPortID, "root", "handle", "1:0", "netem", "delay", delay + "ms"}
+
+		if _, err = installQos(args...); err != nil {
+			fmt.Println("install qos delay error in addQos")
+			return err
+		}
+		con.Delay = delay
+
+	} else {
+		// set 0ms as a root qdisc
+		// unit is ms
+		args := []string{"qdisc", "add", "dev", con.OvsPortID, "root", "handle", "1:0", "netem", "delay", "0ms"}
+
+		if _, err = installQos(args...); err != nil {
+			fmt.Println("install qos delay error in addQos")
+			return err
+		}
+		con.Delay = "0"
+	}
+
+	if bw != "" {
+		// unit is kbit
+		args := []string{"qdisc", "add", "dev", con.OvsPortID, "parent", "1:1", "handle", "10:", "tbf", "rate", bw + "kbit", "buffer", "1600", "limit", "3000"}
+
+		if _, err = installQos(args...); err != nil {
+			fmt.Println("install qos bw error in addQos")
+			return err
+		}
+		con.BandWidth = bw
+
+	} else {
+		args := []string{"qdisc", "add", "dev", con.OvsPortID, "parent", "1:1", "handle", "10:", "tbf", "rate", "8000000kbit", "buffer", "1600", "limit", "3000"}
+
+		if _, err = installQos(args...); err != nil {
+			fmt.Println("install qos bw error in addQos")
+			return err
+		}
+		// magic number
+		con.BandWidth = "8000000"
+	}
+
+	return nil
+}
+
+func changeQos(d *Daemon, containerId, bw, delay string) error {
+	// use tc command to set container egress bw and delay
 	// this command is set in the container ns
 
 	con, _ := d.connections[containerId]
@@ -441,11 +521,28 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 	// In the end switch back to the original namespace
 	defer netns.Set(origns)
 
-	args := []string{"qdisc", "add", "dev", con.OvsPortID, "root", "netem", "delay", delay}
-	fmt.Println(args)
-	if _, err = installQos(args...); err != nil {
-		fmt.Println("install qos error in addQos")
-		return err
+	// delay is root qdisc
+	if delay != "" {
+		// unit is ms
+		args := []string{"qdisc", "change", "dev", con.OvsPortID, "root", "handle", "1:0", "netem", "delay", delay + "ms"}
+
+		if _, err = installQos(args...); err != nil {
+			fmt.Println("install qos delay error in changeQos")
+			return err
+		}
+		con.Delay = delay
+
+	}
+
+	if bw != "" {
+		// unit is kbit
+		args := []string{"qdisc", "change", "dev", con.OvsPortID, "parent", "1:1", "handle", "10:", "tbf", "rate", bw + "kbit", "buffer", "1600", "limit", "3000"}
+
+		if _, err = installQos(args...); err != nil {
+			fmt.Println("install qos bw error in changeQos")
+			return err
+		}
+		con.BandWidth = bw
 	}
 
 	return nil

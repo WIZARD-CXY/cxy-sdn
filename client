@@ -666,6 +666,7 @@ case "$1" in
         ;;
     *)
         usage
+        curl -X POST -d "bw=500&delay=50ms" http://127.0.0.1:8888/qos/${fullcontainerid}
         exit 1
         ;;
 esac

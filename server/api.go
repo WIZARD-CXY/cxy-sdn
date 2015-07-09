@@ -77,9 +77,9 @@ func createRouter(d *Daemon) *mux.Router {
 			"/connection":    createConn,
 			"/qos/{id:.*}":   createQos,
 		},
-		/*"PUT": {
-			"/qos/{id:.}/": updateQos,
-		},*/
+		"PUT": {
+			"/qos/{id:.*}": updateQos,
+		},
 		"DELETE": {
 			"/network/{name:.*}":  delNet,
 			"/connection/{id:.*}": delConn,
@@ -364,7 +364,7 @@ func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 		return &HttpErr{http.StatusBadRequest, "bw and delay is empty"}
 	}
 
-	con, ok := d.connections[containerId]
+	_, ok := d.connections[containerId]
 
 	if !ok {
 		return &HttpErr{http.StatusNotFound, "container not found"}
@@ -374,8 +374,30 @@ func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 		return &HttpErr{http.StatusInternalServerError, err.Error()}
 	}
 
-	con.BandWidth = bw
-	con.Delay = delay
+	return nil
+}
+
+// update a qos for a container
+func updateQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
+	bw := r.FormValue("bw")
+	delay := r.FormValue("delay")
+
+	vars := mux.Vars(r)
+	containerId := vars["id"]
+
+	if bw == "" && delay == "" {
+		return &HttpErr{http.StatusBadRequest, "bw and delay is empty"}
+	}
+
+	_, ok := d.connections[containerId]
+
+	if !ok {
+		return &HttpErr{http.StatusNotFound, "container not found"}
+	}
+
+	if err := changeQos(d, containerId, bw, delay); err != nil {
+		return &HttpErr{http.StatusInternalServerError, err.Error()}
+	}
 
 	return nil
 }
