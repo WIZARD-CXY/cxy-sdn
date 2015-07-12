@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -560,4 +561,73 @@ func installQos(args ...string) ([]byte, error) {
 	}
 
 	return output, err
+}
+
+// monitor each container network interface's egress and ingress traffic
+
+func monitorNetworkTraffic(d *Daemon) {
+	//loop through all containers get their net interface info
+	for {
+		for _, con := range d.connections {
+			preRx := con.RXTotal
+			preTx := con.TXTotal
+
+			rx, tx := getInterfaceInfo(con)
+
+			con.TXTotal = tx
+			con.RXTotal = rx
+
+			con.RXRate = float64(rx-preRx) * 8 / 3
+			con.TXRate = float64(tx-preTx) * 8 / 3
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+}
+
+func getInterfaceInfo(con *Connection) (rx, tx uint64) {
+	// Lock the OS Thread so we don't accidentally switch namespaces
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// save the old netns
+	origns, _ := netns.Get()
+
+	defer origns.Close()
+
+	targetns, _ := netns.GetFromName(con.ContainerPID)
+
+	defer targetns.Close()
+
+	// switch to targetns
+	netns.Set(targetns)
+
+	// In the end switch back to the original namespace
+	defer netns.Set(origns)
+
+	// get the interface rx bytes
+	path, _ := exec.LookPath("ifconfig")
+
+	args := []string{con.OvsPortID}
+	output, _ := exec.Command(path, args...).CombinedOutput()
+
+	ss := string(output[:len(output)-1]) //trim trailing '/n'
+
+	idx := strings.Index(ss, "RX bytes:")
+	if idx == -1 {
+		return 0, 0
+	}
+	lastline := ss[idx:]
+	aa := strings.Split(lastline, " ")
+	rxbytes := strings.Split(aa[1], ":")[1]
+	txbytes := strings.Split(aa[6], ":")[1]
+
+	rx, _ = strconv.ParseUint(rxbytes, 10, 64)
+	tx, _ = strconv.ParseUint(txbytes, 10, 64)
+
+	rx /= 1024
+	tx /= 1024
+
+	return
+
 }

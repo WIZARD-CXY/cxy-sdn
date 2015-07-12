@@ -47,6 +47,10 @@ type Connection struct {
 	OvsPortID        string        `json:"ovsPortID"`
 	BandWidth        string        `json:"bandWidth,omitempty"`
 	Delay            string        `json:"delay,omitempty"`
+	RXTotal          uint64        `json:"rxKbytes"` // in KB
+	TXTotal          uint64        `json:"txKbytes"` // in KB
+	RXRate           float64       `json:"rxrate"`   // in Kb/s
+	TXRate           float64       `json:"txrate"`   // in Kb/s
 	ConnectionDetail OvsConnection `json:"ovs_connectionDetails"`
 }
 

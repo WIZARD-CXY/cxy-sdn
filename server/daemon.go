@@ -92,6 +92,8 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	//start a goroutine to manage connection
 	go connHandler(d)
 
+	go monitorNetworkTraffic(d)
+
 	sig_chan := make(chan os.Signal, 1)
 	signal.Notify(sig_chan, os.Interrupt)
 	go func() {
