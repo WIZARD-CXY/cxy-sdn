@@ -119,7 +119,7 @@ func connHandler(d *Daemon) {
 		case addConn:
 			connDetail, err := addConnection(c.Connection.ContainerPID, c.Connection.Network, c.Connection.RequestIp)
 			if err != nil {
-				fmt.Printf("err is %+v\n", err)
+				fmt.Printf("conhandler err is %+v\n", err)
 				c.Connection.OvsPortID = "-1"
 				c.Result <- c.Connection
 				continue
@@ -127,11 +127,12 @@ func connHandler(d *Daemon) {
 			fmt.Printf("connDetails %v\n", connDetail)
 			c.Connection.OvsPortID = connDetail.Name
 			c.Connection.ConnectionDetail = connDetail
-			d.connections[c.Connection.ContainerID] = c.Connection
+
+			d.connections.Set(c.Connection.ContainerID, c.Connection)
 			c.Result <- c.Connection
 		case deleteConn:
 			DeleteConnection(c.Connection.ConnectionDetail, c.Connection.Network)
-			delete(d.connections, c.Connection.ContainerID)
+			d.connections.Delete(c.Connection.ContainerID)
 			c.Result <- c.Connection
 		}
 	}
@@ -413,7 +414,7 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 	// use tc command to set container egress bw and delay
 	// this command runs in the container ns
 
-	con, _ := d.connections[containerId]
+	con := d.connections.Get(containerId).(*Connection)
 
 	// Lock the OS Thread so we don't accidentally switch namespaces
 	runtime.LockOSThread()
@@ -493,7 +494,7 @@ func changeQos(d *Daemon, containerId, bw, delay string) error {
 	// use tc command to set container egress bw and delay
 	// this command is set in the container ns
 
-	con, _ := d.connections[containerId]
+	con, _ := d.connections.Get(containerId).(*Connection)
 
 	// Lock the OS Thread so we don't accidentally switch namespaces
 	runtime.LockOSThread()
@@ -567,19 +568,22 @@ func installQos(args ...string) ([]byte, error) {
 
 func monitorNetworkTraffic(d *Daemon) {
 	//loop through all containers get their net interface info
+
 	for {
-		for _, con := range d.connections {
-			preRx := con.RXTotal
-			preTx := con.TXTotal
+		d.connections.RLock()
+		for _, con := range d.connections.rm {
+			preRx := con.(*Connection).RXTotal
+			preTx := con.(*Connection).TXTotal
 
-			rx, tx := getInterfaceInfo(con)
+			rx, tx := getInterfaceInfo(con.(*Connection))
 
-			con.TXTotal = tx
-			con.RXTotal = rx
+			con.(*Connection).TXTotal = tx
+			con.(*Connection).RXTotal = rx
 
-			con.RXRate = float64(rx-preRx) * 8 / 3
-			con.TXRate = float64(tx-preTx) * 8 / 3
+			con.(*Connection).RXRate = float64(rx-preRx) * 8 / 3
+			con.(*Connection).TXRate = float64(tx-preTx) * 8 / 3
 		}
+		d.connections.RUnlock()
 		time.Sleep(3 * time.Second)
 	}
 
