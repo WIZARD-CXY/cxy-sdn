@@ -1,18 +1,70 @@
 package server
 
 import (
-	"github.com/codegangsta/cli"
-	// "github.com/golang/glog"
 	"fmt"
+	"github.com/codegangsta/cli"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 )
+
+// concurrent-safe map
+type SafeMap struct {
+	sync.RWMutex
+	rm map[string]interface{}
+}
+
+func NewSafeMap() *SafeMap {
+	return &SafeMap{
+		rm: make(map[string]interface{}),
+	}
+}
+
+func (m *SafeMap) Get(k string) interface{} {
+	m.RLock()
+	defer m.RUnlock()
+
+	if val, ok := m.rm[k]; ok {
+		return val
+	}
+	return nil
+}
+
+// returns false if k is already in the sm and v is same with the old value
+func (m *SafeMap) Set(k string, v interface{}) bool {
+	m.Lock()
+	defer m.Unlock()
+
+	if val, ok := m.rm[k]; !ok {
+		m.rm[k] = v
+	} else if val != v {
+		m.rm[k] = v
+	} else {
+		return false
+	}
+	return true
+}
+
+func (m *SafeMap) Check(k string) bool {
+	m.RLock()
+	defer m.RUnlock()
+
+	_, ok := m.rm[k]
+
+	return ok
+}
+
+func (m *SafeMap) Delete(k string) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.rm, k)
+}
 
 type Daemon struct {
 	bridgeConf     *BridgeConf
 	isBootstrap    bool
-	connections    map[string]*Connection // each connection is a connected container, key is containerID
+	connections    *SafeMap // each connection is a connected container, key is containerID
 	bindInterface  string
 	clusterChan    chan *NodeCtx
 	connectionChan chan *ConnectionCtx
@@ -34,7 +86,7 @@ func NewDaemon() *Daemon {
 	return &Daemon{
 		&BridgeConf{},
 		false,
-		make(map[string]*Connection, 50),
+		NewSafeMap(),
 		"",
 		make(chan *NodeCtx),
 		make(chan *ConnectionCtx),

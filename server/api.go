@@ -49,8 +49,8 @@ type Connection struct {
 	Delay            string        `json:"delay,omitempty"`
 	RXTotal          uint64        `json:"rxKbytes"` // in KB
 	TXTotal          uint64        `json:"txKbytes"` // in KB
-	RXRate           float64       `json:"rxrate"`   // in Kb/s
-	TXRate           float64       `json:"txrate"`   // in Kb/s
+	RXRate           float64       `json:"rxRate"`   // in Kb/s
+	TXRate           float64       `json:"txRate"`   // in Kb/s
 	ConnectionDetail OvsConnection `json:"ovs_connectionDetails"`
 }
 
@@ -119,7 +119,7 @@ func getConf(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 // set the bridge conf
 func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	if r.Body == nil {
-		return &HttpErr{http.StatusBadRequest, "SetConf requese has no body"}
+		return &HttpErr{http.StatusBadRequest, "SetConf request has no body"}
 	}
 
 	cfg := &BridgeConf{}
@@ -260,7 +260,10 @@ func leaveCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 
 // get all connections
 func getConns(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
-	data, err := json.Marshal(d.connections)
+	d.connections.RLock()
+	data, err := json.Marshal(d.connections.rm)
+	d.connections.RUnlock()
+
 	if err != nil {
 		return &HttpErr{http.StatusInternalServerError, err.Error()}
 	}
@@ -275,14 +278,15 @@ func getConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	vars := mux.Vars(r)
 
 	containerId := vars["id"]
+	d.connections.RLock()
+	con := d.connections.Get(containerId)
+	d.connections.RUnlock()
 
-	conn := d.connections[containerId]
-
-	if conn == nil {
+	if con == nil {
 		return &HttpErr{http.StatusNotFound, containerId}
 	}
 
-	data, err := json.Marshal(conn)
+	data, err := json.Marshal(con.(*Connection))
 
 	if err != nil {
 		return &HttpErr{http.StatusInternalServerError, err.Error()}
@@ -338,15 +342,15 @@ func delConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	vars := mux.Vars(r)
 	containerId := vars["id"]
 
-	con, ok := d.connections[containerId]
+	con := d.connections.Get(containerId)
 
-	if !ok {
+	if con == nil {
 		return &HttpErr{http.StatusNotFound, "container not found"}
 	}
 
 	ctx := &ConnectionCtx{
 		deleteConn,
-		con,
+		con.(*Connection),
 		make(chan *Connection),
 	}
 
@@ -368,7 +372,7 @@ func createQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 		return &HttpErr{http.StatusBadRequest, "bw and delay is empty"}
 	}
 
-	_, ok := d.connections[containerId]
+	ok := d.connections.Check(containerId)
 
 	if !ok {
 		return &HttpErr{http.StatusNotFound, "container not found"}
@@ -393,7 +397,7 @@ func updateQos(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 		return &HttpErr{http.StatusBadRequest, "bw and delay is empty"}
 	}
 
-	_, ok := d.connections[containerId]
+	ok := d.connections.Check(containerId)
 
 	if !ok {
 		return &HttpErr{http.StatusNotFound, "container not found"}
