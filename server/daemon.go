@@ -69,7 +69,7 @@ type Daemon struct {
 	clusterChan    chan *NodeCtx
 	connectionChan chan *ConnectionCtx
 	readyChan      chan bool
-	Gateways       map[string]struct{}
+	Gateways       map[string]struct{} //network set
 }
 
 type NodeCtx struct {
@@ -115,6 +115,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 			fmt.Println("error in Init netAgent")
 		}
 
+		// wait a while for agent to fully start
 		time.Sleep(3 * time.Second)
 		if d.isBootstrap {
 			d.readyChan <- true

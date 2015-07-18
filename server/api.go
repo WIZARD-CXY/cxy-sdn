@@ -14,7 +14,7 @@ type HttpErr struct {
 	message string
 }
 
-const version = "0.1"
+const version = "6.0"
 
 type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr
 
@@ -124,8 +124,7 @@ func setConf(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 
 	cfg := &BridgeConf{}
 
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(cfg)
+	err := json.NewDecoder(r.Body).Decode(cfg)
 
 	if err != nil {
 		return &HttpErr{http.StatusInternalServerError, "setConf json decode failed"}
@@ -158,7 +157,7 @@ func getNet(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	network, err := GetNetwork(name)
 
 	if err != nil {
-		return &HttpErr{http.StatusInternalServerError, err.Error()}
+		return &HttpErr{http.StatusNotFound, err.Error()}
 	}
 
 	data, err := json.Marshal(network)
@@ -180,8 +179,7 @@ func createNet(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	}
 
 	network := &Network{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(network)
+	err := json.NewDecoder(r.Body).Decode(network)
 
 	if err != nil {
 		return &HttpErr{http.StatusInternalServerError, err.Error()}
@@ -298,15 +296,14 @@ func getConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	return nil
 }
 
-// create a container to ovs-bridge connection
+// create a container connection
 func createConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	if r.Body == nil {
 		return &HttpErr{http.StatusBadRequest, "request body is empty"}
 	}
 
 	con := &Connection{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(con)
+	err := json.NewDecoder(r.Body).Decode(con)
 
 	if err != nil {
 		return &HttpErr{http.StatusInternalServerError, err.Error()}

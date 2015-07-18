@@ -598,7 +598,6 @@ func TestCreateQosApi(t *testing.T) {
 
 }
 
-/*
 func TestUpdateQos(t *testing.T) {
 	d := NewDaemon()
 	connection := &Connection{
@@ -608,29 +607,12 @@ func TestUpdateQos(t *testing.T) {
 		Network:       "default",
 	}
 	d.connections["abc123"] = connection
-	request, _ := http.NewRequest("DELETE", "/connection/abc123", nil)
+	request, _ := http.NewRequest("PUT", "/qos/abc123?bw=200&delay=20", nil)
 	response := httptest.NewRecorder()
-
-	go func() {
-		for {
-			context := <-d.connectionChan
-			if context == nil {
-				t.Fatalf("Object taken from channel is nil")
-			}
-			if context.Action != deleteConn {
-				t.Fatal("should be adding a new connection")
-			}
-
-			if !reflect.DeepEqual(context.Connection, connection) {
-				t.Fatal("payload is incorrect")
-			}
-			context.Result <- connection
-		}
-	}()
 
 	createRouter(d).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
 	}
-}*/
+}

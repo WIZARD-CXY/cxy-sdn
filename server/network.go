@@ -164,7 +164,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 }
 
 // this function is used to create network from network datastore
-// assume the network whose name is `name` is already exist but have no interface
+// assume the network whose name is `name` is already exist but have no interface on the node
 func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 	network, err := GetNetwork(name)
 
@@ -242,8 +242,8 @@ func DeleteNetwork(name string) error {
 		return err
 	}
 
-	eccerror := netAgent.Delete(networkStore, name)
-	if eccerror != netAgent.OK {
+	errcode := netAgent.Delete(networkStore, name)
+	if errcode != netAgent.OK {
 		return errors.New("Error deleting network")
 	}
 	releaseVlan(network.VlanID)

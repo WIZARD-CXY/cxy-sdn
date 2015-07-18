@@ -14,7 +14,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "cxy-sdn"
 	app.Usage = "sdn tool for container cloud platform"
-	app.Version = "0.1"
+	app.Version = "6.0"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/WIZARD-CXY/cxy-sdn/util"
-	// "github.com/golang/glog"
 	"github.com/socketplane/libovsdb"
 	"github.com/vishvananda/netns"
 )
@@ -483,7 +482,7 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 			fmt.Println("install qos bw error in addQos")
 			return err
 		}
-		// magic number
+		// magic number just a large bw
 		con.BandWidth = "8000000"
 	}
 
@@ -580,11 +579,11 @@ func monitorNetworkTraffic(d *Daemon) {
 			con.(*Connection).TXTotal = tx
 			con.(*Connection).RXTotal = rx
 
-			con.(*Connection).RXRate = float64(rx-preRx) * 8 / 3
-			con.(*Connection).TXRate = float64(tx-preTx) * 8 / 3
+			con.(*Connection).RXRate = float64(rx-preRx) * 8 / 2
+			con.(*Connection).TXRate = float64(tx-preTx) * 8 / 2
 		}
 		d.connections.RUnlock()
-		time.Sleep(3 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 }

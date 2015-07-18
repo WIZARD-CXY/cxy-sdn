@@ -51,12 +51,11 @@ func StartAgent(serverMode bool, bootstrap bool, bindInterface string, dataDir s
 
 	watchForExistingRegisteredUpdates()
 
-	//go RegisterForNodeUpdates()
 	go startConsul(serverMode, bootstrap, bindAddr, dataDir, errChan)
 
 	select {
 	case <-errChan:
-		return errors.New("Error start consul agent")
+		return errors.New("Error start net agent")
 	case <-time.After(time.Second * 5):
 	}
 	return nil
@@ -103,14 +102,14 @@ func Execute(args ...string) int {
 	return exitCode
 }
 
+const CONSUL_CATALOG_BASE_URL = "http://localhost:8500/v1/catalog/"
+
 // Node operation related
 
 type Node struct {
 	Name    string `json:"Name,omitempty"`
 	Address string `json:"Addr,ommitempty"`
 }
-
-const CONSUL_CATALOG_BASE_URL = "http://localhost:8500/v1/catalog/"
 
 func Join(addr string) error {
 	ret := Execute("join", addr)

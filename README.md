@@ -3,3 +3,5 @@
 
 Using sdn tools and netAgent to offer advanced network management for container cloud platform.
 
+Version 6.0 ready!
+

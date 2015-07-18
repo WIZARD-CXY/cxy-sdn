@@ -30,12 +30,12 @@ func join(addr string) error {
 
 func leave() error {
 	if err := netAgent.Leave(); err != nil {
-		//glog.Error(err)
+
 		return err
 	}
 	//clean the data storage
 	if err := os.RemoveAll(dataDir); err != nil {
-		// glog.Error(err)
+
 		return err
 	}
 	return nil
