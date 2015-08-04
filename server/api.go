@@ -1,3 +1,7 @@
+// package server implements the server logic of
+// cxy-sdn software including a apiserver and consul
+// datastore backend and ovs connection manager
+
 package server
 
 import (
