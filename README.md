@@ -4,7 +4,7 @@
 
 Using sdn tools and netAgent to offer advanced network management for container cloud platform.
 
-Version 6.0 ready!
+Version 7.0 ready!
 
 ## Feature
 
@@ -21,3 +21,5 @@ Version 6.0 ready!
 6 Monitor the container network traffic, clients can get historical or instantaneous ingress and egress rate via http request.
 
 7 Migrate containers among different hosts without changing ip address.
+
+8 Support k8s as a network plugin !!
