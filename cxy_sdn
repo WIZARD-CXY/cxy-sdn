@@ -93,6 +93,12 @@ COMMANDS:
 
     teardown namespace pod cid
             teardown before the infra pod is killed
+    #TO-DO
+    status cid
+        get pod ip(aka pod infra container ip)
+    setQoS cid
+           set up container's egress bandwidth and latency whose container id is CID
+    
 
 EOF
 }
@@ -566,6 +572,7 @@ case "$1" in
         ;;
     setup)
         echo "set up network"
+        # $0 is command name, $2 is pod namespace used as network name for cxy-sdn
         cPid=$(docker inspect --format='{{ .State.Pid }}' $4)
         cName=$(docker inspect --format='{{ .Name }}' $4)
         json=$(curl -s -X POST http://localhost:8888/connection -d "{ \"containerID\": \"$4\", \"containerName\": \"$cName\", \"requestIP\": \"$requestIp\", \"containerPID\": \"$cPid\", \"network\": \"$2\" }")
@@ -698,7 +705,8 @@ case "$1" in
         ;;
     *)
         usage
-        curl -X POST -d "bw=500&delay=50ms" http://127.0.0.1:8888/qos/${fullcontainerid}
+        # QoS setting
+        ##curl -X POST -d "bw=500&delay=50ms" http://127.0.0.1:8888/qos/${fullcontainerid}
         exit 1
         ;;
 esac
