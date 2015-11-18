@@ -280,9 +280,7 @@ func getConn(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 	vars := mux.Vars(r)
 
 	containerId := vars["id"]
-	d.connections.RLock()
 	con := d.connections.Get(containerId)
-	d.connections.RUnlock()
 
 	if con == nil {
 		return &HttpErr{http.StatusNotFound, containerId}
