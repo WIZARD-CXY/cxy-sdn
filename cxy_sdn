@@ -254,7 +254,7 @@ install_ovs() {
     esac
 
     sleep 1
-    log_step "Setting OVSDB Listener"
+    log_step "Setting OVSDB Listener" #important!
     ovs-vsctl set-manager ptcp:6640
 }
 
