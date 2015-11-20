@@ -1,4 +1,4 @@
-Here I briefly discuss how to deploy cxy-sdn along with Kubernetes, tested on Kubernetes 1.0.6
+Here I briefly discuss how to deploy cxy-sdn along with Kubernetes, tested on Kubernetes 1.1.2
 
 First, cxy-sdn has two parts: client side(cxy_sdn, bash script) and a server side(advanced network management and configuration tool wrapped in a docker image which name is wizardcxy/cxy-sdn)
 

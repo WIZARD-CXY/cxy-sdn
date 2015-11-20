@@ -108,6 +108,8 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
 
 		gateway = RequestIP(fmt.Sprint(vlanID), *subnet)
+		MarkUsed(gateway, *subnet)
+
 		network = &Network{name, subnet.String(), gateway.String(), vlanID}
 
 		if err = AddInternalPort(ovsClient, bridgeName, name, vlanID); err != nil {
@@ -460,7 +462,7 @@ func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 
 }
 
-//  Mark a specified ip as used, return trus as success
+// Mark a specified ip as used, return true as success
 func MarkUsed(addr net.IP, subnet net.IPNet) bool {
 	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
 
