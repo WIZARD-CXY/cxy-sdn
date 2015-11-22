@@ -62,7 +62,7 @@ func CreateBridge() (string, error) {
 	if ovsClient == nil {
 		return "", errors.New("OVS not connected")
 	}
-	// If the bridge has been created, a internal port with the same name should exist
+	// If the bridge has been created, an internal port with the same name should exist
 	exists, err := portExists(ovsClient, bridgeName)
 	if err != nil {
 		return "", err
@@ -175,9 +175,9 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 		// if not request a static ip, using system auto-choose
 		ip = RequestIP(fmt.Sprint(bridgeNetwork.VlanID), *subnet)
 	} else {
-		// if request ip, mark it as used and use it
+		// if request ip, mark it used and use it
 		ip = net.ParseIP(requestIp)
-		MarkUsed(ip, *subnet)
+		MarkUsed(fmt.Sprintf("%d", bridgeNetwork.VlanID), ip, *subnet)
 	}
 
 	fmt.Println("newIP is", ip)

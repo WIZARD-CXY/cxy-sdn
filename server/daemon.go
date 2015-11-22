@@ -105,7 +105,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	// start a goroutine to serve api
 	go ServeApi(d)
 
-	//start a gorouting to start agent
+	// start a gorouting to start agent
 	go func() {
 		d.bindInterface = ctx.String("iface")
 

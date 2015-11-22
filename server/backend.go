@@ -51,6 +51,7 @@ func nodeHandler(d *Daemon) {
 				fmt.Println("Error joining the cluster")
 			}
 			fmt.Println("join to cluster master", ip)
+			// none-bootstrap node need connect to server leader before ready to work
 			d.readyChan <- true
 		case nodeLeave:
 			if err := leave(); err != nil {

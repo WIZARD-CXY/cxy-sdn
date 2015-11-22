@@ -13,8 +13,8 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "cxy-sdn"
-	app.Usage = "sdn tool for container cloud platform"
-	app.Version = "6.0"
+	app.Usage = "Advanced network management and configuration tool for container cloud platform"
+	app.Version = "9.0"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
