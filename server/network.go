@@ -108,7 +108,6 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
 
 		gateway = RequestIP(fmt.Sprint(vlanID), *subnet)
-		MarkUsed(gateway, *subnet)
 
 		network = &Network{name, subnet.String(), gateway.String(), vlanID}
 
@@ -463,8 +462,8 @@ func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 }
 
 // Mark a specified ip as used, return true as success
-func MarkUsed(addr net.IP, subnet net.IPNet) bool {
-	oldArray, _, ok := netAgent.Get(ipStore, subnet.String())
+func MarkUsed(vlanID string, addr net.IP, subnet net.IPNet) bool {
+	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
 
 	if !ok {
 		return false
@@ -486,10 +485,10 @@ func MarkUsed(addr net.IP, subnet net.IPNet) bool {
 
 	util.Set(newArray, pos)
 
-	err2 := netAgent.Put(ipStore, subnet.String(), newArray, oldArray)
+	err2 := netAgent.Put(ipStore, vlanID+"-"+subnet.String(), newArray, oldArray)
 
 	if err2 == netAgent.OUTDATED {
-		MarkUsed(addr, subnet)
+		MarkUsed(vlanID, addr, subnet)
 	}
 
 	return true

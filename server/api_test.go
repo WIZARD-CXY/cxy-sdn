@@ -311,7 +311,7 @@ func TestGetConn(t *testing.T) {
 		BandWidth:     "500",
 		Delay:         "100",
 	}
-	d.connections["abc123"] = connection
+	d.connections.Set("abc123", connection)
 	request, _ := http.NewRequest("GET", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
 
@@ -541,7 +541,7 @@ func TestDeleteConn(t *testing.T) {
 		ContainerPID:  "1234",
 		Network:       "default",
 	}
-	d.connections["abc123"] = connection
+	d.connections.Set("abc123", connection)
 	request, _ := http.NewRequest("DELETE", "/connection/abc123", nil)
 	response := httptest.NewRecorder()
 
@@ -581,7 +581,7 @@ func TestCreateQosApi(t *testing.T) {
 		BandWidth:     "",
 		Delay:         "",
 	}
-	d.connections["abc123"] = connection
+	d.connections.Set("abc123", connection)
 
 	request, _ := http.NewRequest("POST", "/qos/abc123?bw=500&delay=100", nil)
 	response := httptest.NewRecorder()
@@ -592,7 +592,7 @@ func TestCreateQosApi(t *testing.T) {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
 	}
 
-	if d.connections["abc123"].BandWidth != "500" || d.connections["abc123"].Delay != "100" {
+	if d.connections.Get("abc123").(*Connection).BandWidth != "500" || d.connections.Get("abc123").(*Connection).Delay != "100" {
 		t.Fatal("TestCreateQosApi error")
 	}
 
@@ -606,7 +606,7 @@ func TestUpdateQos(t *testing.T) {
 		ContainerPID:  "1234",
 		Network:       "default",
 	}
-	d.connections["abc123"] = connection
+	d.connections.Set("abc123", connection)
 	request, _ := http.NewRequest("PUT", "/qos/abc123?bw=200&delay=20", nil)
 	response := httptest.NewRecorder()
 

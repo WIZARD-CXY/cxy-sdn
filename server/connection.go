@@ -62,7 +62,7 @@ func CreateBridge() (string, error) {
 	if ovsClient == nil {
 		return "", errors.New("OVS not connected")
 	}
-	// If the bridge has been created, a internal port with the same name should exist
+	// If the bridge has been created, an internal port with the same name should exist
 	exists, err := portExists(ovsClient, bridgeName)
 	if err != nil {
 		return "", err
@@ -130,7 +130,7 @@ func connHandler(d *Daemon) {
 			d.connections.Set(c.Connection.ContainerID, c.Connection)
 			c.Result <- c.Connection
 		case deleteConn:
-			DeleteConnection(c.Connection.ConnectionDetail, c.Connection.Network)
+			deleteConnection(c.Connection.ConnectionDetail, c.Connection.Network)
 			d.connections.Delete(c.Connection.ContainerID)
 			c.Result <- c.Connection
 		}
@@ -175,9 +175,9 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 		// if not request a static ip, using system auto-choose
 		ip = RequestIP(fmt.Sprint(bridgeNetwork.VlanID), *subnet)
 	} else {
-		// if request ip, mark it as used and use it
+		// if request ip, mark it used and use it
 		ip = net.ParseIP(requestIp)
-		MarkUsed(ip, *subnet)
+		MarkUsed(fmt.Sprintf("%d", bridgeNetwork.VlanID), ip, *subnet)
 	}
 
 	fmt.Println("newIP is", ip)
@@ -276,7 +276,7 @@ func populateContextCache() {
 	}
 }
 
-func DeleteConnection(connection OvsConnection, networkName string) error {
+func deleteConnection(connection OvsConnection, networkName string) error {
 	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
@@ -564,25 +564,27 @@ func installQos(args ...string) ([]byte, error) {
 }
 
 // monitor each container network interface's egress and ingress traffic
-
 func monitorNetworkTraffic(d *Daemon) {
 	//loop through all containers get their net interface info
-
 	for {
-		d.connections.RLock()
+
 		for _, con := range d.connections.rm {
 			preRx := con.(*Connection).RXTotal
 			preTx := con.(*Connection).TXTotal
 
 			rx, tx := getInterfaceInfo(con.(*Connection))
 
-			con.(*Connection).TXTotal = tx
+			// may cost much because of lock
+			d.connections.Lock()
 			con.(*Connection).RXTotal = rx
+			con.(*Connection).TXTotal = tx
 
+			// rate not very precise
 			con.(*Connection).RXRate = float64(rx-preRx) * 8 / 2
 			con.(*Connection).TXRate = float64(tx-preTx) * 8 / 2
+			d.connections.Unlock()
 		}
-		d.connections.RUnlock()
+
 		time.Sleep(2 * time.Second)
 	}
 
