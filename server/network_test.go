@@ -12,7 +12,7 @@ var subnetArray []*net.IPNet
 var bridgeUUID string
 
 func TestStartAgent(t *testing.T) {
-	err := InitAgent("eth0", true)
+	err := InitAgent("eth1", true)
 
 	if err != nil {
 		t.Errorf("Error starting agent")
@@ -109,16 +109,18 @@ func TestRequestandReleaseIP(t *testing.T) {
 		t.Error(addr.String())
 	}
 
+	MarkUsed("1", net.ParseIP("192.168.0.2"), *ipNet)
+
 	addr = RequestIP("1", *ipNet).To4()
 
-	if int(addr[3]) != 2 {
+	if int(addr[3]) != 4 {
 		t.Error(addr.String())
 	}
 }
 
 func TestNetworkCleanup(t *testing.T) {
 	if os.Getuid() != 0 {
-		msg := "Skipped test because it requires root privileges."
+		msg := "Skipped TestNetworkCleanup test because it requires root privileges."
 		fmt.Println(msg)
 		t.Skip(msg)
 	}
@@ -130,9 +132,9 @@ func TestNetworkCleanup(t *testing.T) {
 	}
 
 	// delete the ovs bridge
-	/*if err := DeleteBridge(bridgeUUID); err != nil {
+	if err := DeleteBridge(bridgeUUID); err != nil {
 		t.Error("Delete ovs bridge failed", err)
-	}*/
+	}
 }
 
 func TestLeaveCluster(t *testing.T) {

@@ -1,4 +1,4 @@
-all: build test
+all: build test push
 
 build:
 	go build -v

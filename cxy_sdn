@@ -93,9 +93,10 @@ COMMANDS:
 
     teardown namespace pod cid
             teardown before the infra pod is killed
-    #TO-DO
-    status cid
-        get pod ip(aka pod infra container ip)
+
+    status namespace pod cid
+            get pod ip(aka pod infra container ip)
+
     setQoS cid
            set up container's egress bandwidth and latency whose container id is CID
     
@@ -573,6 +574,7 @@ case "$1" in
     setup)
         echo "set up network"
         # $0 is command name, $2 is pod namespace used as network name for cxy-sdn
+        # $4 is container id
         cPid=$(docker inspect --format='{{ .State.Pid }}' $4)
         cName=$(docker inspect --format='{{ .Name }}' $4)
         json=$(curl -s -X POST http://localhost:8888/connection -d "{ \"containerID\": \"$4\", \"containerName\": \"$cName\", \"requestIP\": \"$requestIp\", \"containerPID\": \"$cPid\", \"network\": \"$2\" }")
@@ -580,9 +582,23 @@ case "$1" in
         ;;
     teardown)
         echo "teardown pod"
+        # $0 is command name, $2 is pod namespace used as network name for cxy-sdn
+        # $4 is container id
         cid=$(docker ps -a --no-trunc=true | grep $4 | awk {' print $1'})
         curl -s -X DELETE http://localhost:8888/connection/$cid
         sleep 1
+        ;;
+    status)
+        # $0 is command name, $2 is pod namespace used as network name for cxy-sdn
+        # $4 is container id
+        containerId=$(docker ps -a --no-trunc=true | grep $4 | awk {' print $1'})
+        if [ -z "$containerId" ]; then
+            log_fatal "Could not find a Container with Id : $containerId"
+        else
+            json=$(curl -s -X GET http://localhost:8888/connection/$containerId | python -m json.tool | grep ip)
+            ip=$(echo $json | sed 's/[,{}]/\n/g' | awk  -v RS="" '{print $2}')
+            echo ""{ \"kind\": \"PodNetworkStatus\", \"apiVersion\": \"v1beta1\", \"ip\": $ip }""
+        fi
         ;;
     help)
         usage

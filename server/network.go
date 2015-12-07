@@ -19,11 +19,6 @@ const ipStore = "ipStore"
 const defaultNetwork = "cxy"
 
 var gatewayAddrs = []string{
-	// Here we don't follow the convention of using the 1st IP of the range for the gateway.
-	// This is to use the same gateway IPs as the /24 ranges, which predate the /16 ranges.
-	// In theory this shouldn't matter - in practice there's bound to be a few scripts relying
-	// on the internal addressing or other stupid things like that.
-	// They shouldn't, but hey, let's not break them unless we really have to.
 	"10.1.42.1/16",
 	"10.42.42.1/16",
 	"172.16.42.1/24",
@@ -84,6 +79,20 @@ func GetNetworks() ([]Network, error) {
 	}
 	return networks, nil
 }
+
+func CreateDefaultNetwork(isBootstrap bool) (*Network, error) {
+	subnet, err := GetAvailableSubnet()
+
+	if err != nil {
+		return &Network{}, err
+	}
+	if isBootstrap {
+		return CreateNetwork(defaultNetwork, subnet)
+	} else {
+		return CreateNetwork2(defaultNetwork, subnet)
+	}
+}
+
 func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	network, err := GetNetwork(name)
 
@@ -131,8 +140,12 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		}
 
 	} else {
-		fmt.Printf("Interface %s already exists\n", name)
 		ifaceAddr := addr.String()
+		// even though the interface exist, mark its IP as used by using RequestIP to
+		// let the ipam and I happy
+		RequestIP(fmt.Sprint(vlanID), *subnet)
+
+		fmt.Printf("Interface %s already exists with IP %s, subnet %s, in %d vlan\n", name, ifaceAddr, subnet.String(), vlanID)
 
 		gateway, subnet, err = net.ParseCIDR(ifaceAddr)
 
@@ -222,19 +235,6 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 
 	return network, nil
 
-}
-
-func CreateDefaultNetwork(isBootstrap bool) (*Network, error) {
-	subnet, err := GetAvailableSubnet()
-
-	if err != nil {
-		return &Network{}, err
-	}
-	if isBootstrap {
-		return CreateNetwork(defaultNetwork, subnet)
-	} else {
-		return CreateNetwork2(defaultNetwork, subnet)
-	}
 }
 
 func DeleteNetwork(name string) error {
@@ -409,7 +409,6 @@ func GetAvailableSubnet() (subnet *net.IPNet, err error) {
 
 // ipStore manage the cluster ip resource
 // key is the vlan/subnet, value is the available ip address bytes
-
 // Get an IP from the unused subnet and mark it as used
 func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 	ipCount := util.IPCount(subnet)
@@ -466,6 +465,7 @@ func MarkUsed(vlanID string, addr net.IP, subnet net.IPNet) bool {
 	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
 
 	if !ok {
+		// the kv pair not exist yet
 		return false
 	}
 

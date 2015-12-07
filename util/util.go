@@ -25,6 +25,7 @@ func CheckRouteOverlaps(toCheck *net.IPNet) error {
 
 	for _, network := range networks {
 		if network.Dst != nil && NetworkOverlaps(toCheck, network.Dst) {
+			fmt.Println(toCheck, network.Dst)
 			return ErrNetworkOverlaps
 		}
 	}

@@ -137,9 +137,8 @@ func (d *Daemon) Run(ctx *cli.Context) {
 		if _, err := CreateDefaultNetwork(d.isBootstrap); err != nil {
 			fmt.Println("Create cxy network error", err.Error())
 		}
-		if !d.isBootstrap {
-			syncNetwork(d)
-		}
+
+		syncNetwork(d)
 	}()
 
 	//start a goroutine to manage connection
@@ -148,10 +147,15 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	go monitorNetworkTraffic(d)
 
 	sig_chan := make(chan os.Signal, 1)
-	signal.Notify(sig_chan, os.Interrupt)
+
+	// use os.Kill here to handle docker rm -f cxy-sdn container
+	signal.Notify(sig_chan, os.Interrupt, os.Kill)
 	go func() {
 		for _ = range sig_chan {
-			// TODO clean up work
+			// TODO clean up work Delete ovs-br0
+			// DeleteBridge(bridgeUUID)
+
+			fmt.Println("Exit now")
 			os.Exit(0)
 		}
 	}()

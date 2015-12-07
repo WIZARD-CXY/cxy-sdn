@@ -90,7 +90,9 @@ func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) (string
 	mutateUuid := []libovsdb.UUID{libovsdb.UUID{namedBridgeUuid}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "insert", mutateSet)
-	fmt.Println("xixi", getRootUuid())
+	fmt.Println()
+	fmt.Println("+++++++++++++++", getRootUuid())
+
 	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 
 	// simple mutate operation
@@ -131,7 +133,7 @@ func DeleteOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName, bridgeUuid str
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "delete", mutateSet)
 	// hacked Condition till we get Monitor / Select working
-	fmt.Println("-------", getRootUuid())
+	fmt.Println("++++++++++++++", getRootUuid())
 	condition = libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 
 	// simple mutate operation
