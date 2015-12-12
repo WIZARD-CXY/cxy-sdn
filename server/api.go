@@ -18,7 +18,7 @@ type HttpErr struct {
 	message string
 }
 
-const version = "9.0"
+const version = "10.0"
 
 type HttpApiFunc func(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr
 

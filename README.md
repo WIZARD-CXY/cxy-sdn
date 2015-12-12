@@ -4,7 +4,7 @@
 
 Using sdn tools and netAgent to offer advanced network management for container cloud platform.
 
-Version 7.0 ready!
+Version 10.0 ready!
 
 ## Feature
 
@@ -14,7 +14,7 @@ Version 7.0 ready!
 
 3 Use consul as data store backend and make all the configuration data available on every node.
 
-4 Build a cxy-sdn docker image, so easy to run.
+4 Build a cxy-sdn docker image which is wizardcxy/cxy-sdn, so easy to run.
 
 5 Can control the container network QoS settings like bandwidth and latency.
 

@@ -232,6 +232,7 @@ func TestAndSet(a []byte) uint32 {
 	for i = 0; i < uint32(len(a)*8); i++ {
 		if !test(a, i) {
 			Set(a, i)
+
 			return i + 1
 		}
 	}
