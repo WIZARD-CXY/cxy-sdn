@@ -153,7 +153,7 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	go func() {
 		for _ = range sig_chan {
 			// TODO clean up work Delete ovs-br0
-			// DeleteBridge(bridgeUUID)
+			DeleteBridge()
 
 			fmt.Println("Exit now")
 			os.Exit(0)

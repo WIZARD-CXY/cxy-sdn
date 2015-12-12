@@ -83,11 +83,21 @@ func CreateBridge() (string, error) {
 	return bridgeUUID, nil
 }
 
-func DeleteBridge(bridgeUUID string) error {
+func DeleteBridge() error {
 	if ovsClient == nil {
 		return errors.New("OVS not connected")
 	}
-	if err := DeleteOVSBridge(ovsClient, bridgeName, bridgeUUID); err != nil {
+	/*if err := DeleteOVSBridge(ovsClient, bridgeName, bridgeUUID); err != nil {
+		return err
+	}*/
+	// use ovs-vsctl to delete bridge ovs-br0
+	path, err := exec.LookPath("ovs-vsctl")
+	if err != nil {
+		return errors.New("ovs-vsctl not found")
+	}
+	args := []string{"del-br", bridgeName}
+	_, err = exec.Command(path, args...).CombinedOutput()
+	if err != nil {
 		return err
 	}
 	return nil
