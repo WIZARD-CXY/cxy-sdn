@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"flag"
-	"github.com/WIZARD-CXY/netAgent"
+	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
 	"github.com/golang/glog"
 	"os"
 	"os/signal"
