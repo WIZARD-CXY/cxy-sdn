@@ -1,0 +1,48 @@
+package: github.com/WIZARD-CXY/cxy-sdn
+import:
+- package: bytes
+- package: crypto/rand
+- package: encoding/base64
+- package: encoding/binary
+- package: encoding/hex
+- package: encoding/json
+- package: errors
+- package: flag
+- package: fmt
+- package: github.com/WIZARD-CXY/cxy-sdn
+  subpackages:
+  - /netAgent
+- package: github.com/codegangsta/cli
+- package: github.com/golang/glog
+- package: github.com/gorilla/mux
+- package: github.com/hashicorp/consul
+  subpackages:
+  - /api
+  - command
+  - command/agent
+  - watch
+- package: github.com/mitchellh/cli
+- package: github.com/socketplane/libovsdb
+- package: github.com/vishvananda/netlink
+  version: 4b5dce31de6d42af5bb9811c6d265472199e0fec
+- package: github.com/vishvananda/netns
+- package: io
+  subpackages:
+  - ioutil
+- package: math
+- package: net
+  subpackages:
+  - http
+  - url
+- package: os
+  subpackages:
+  - exec
+  - signal
+- package: path/filepath
+- package: reflect
+- package: runtime
+- package: strconv
+- package: strings
+- package: sync
+- package: syscall
+- package: time

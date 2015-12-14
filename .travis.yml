@@ -1,20 +1,7 @@
 language: go
 
 go:
-  - 1.4
+  - 1.5
   - tip
 
 script: make test
-install:   
-  - go get github.com/codegangsta/cli
-  - go get github.com/golang/glog
-  - go get github.com/gorilla/mux
-  - go get github.com/hashicorp/consul/api
-  - go get github.com/hashicorp/consul/command
-  - go get github.com/hashicorp/consul/command/agent
-  - go get github.com/hashicorp/consul/command/agent
-  - go get github.com/hashicorp/consul/watch
-  - go get github.com/mitchellh/cli
-  - go get github.com/socketplane/libovsdb
-  - go get github.com/vishvananda/netlink
-  - go get github.com/vishvananda/netns

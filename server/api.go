@@ -68,6 +68,12 @@ func ServeApi(d *Daemon) {
 
 func createRouter(d *Daemon) *mux.Router {
 	r := mux.NewRouter()
+	// configure the router to always run this handler when it couldn't match a request to any other handler
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(fmt.Sprintf("%s not found\n", r.URL)))
+	})
+
 	m := map[string]map[string]HttpApiFunc{
 		"GET": {
 			"/version":            getVersion,

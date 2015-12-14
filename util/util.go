@@ -6,7 +6,6 @@ import (
 
 	"net"
 
-	// log "github.com/golang/glog"
 	"github.com/vishvananda/netlink"
 	"math"
 )
