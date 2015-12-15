@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"net/url"
 )
 
@@ -63,6 +64,9 @@ func ServeApi(d *Daemon) {
 		Addr:    "127.0.0.1:8888",
 		Handler: createRouter(d),
 	}
+	// start a pprof server
+	go http.ListenAndServe("127.0.0.1:8889", nil)
+
 	server.ListenAndServe()
 }
 

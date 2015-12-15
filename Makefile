@@ -1,8 +1,7 @@
 all: build test push
 
 build:
-	export GO15VENDOREXPERIMENT=1
-	go build -v
+	GO15VENDOREXPERIMENT=1 go build -v
 	docker build -t wizardcxy/cxy-sdn .
 push:
 	docker push wizardcxy/cxy-sdn
