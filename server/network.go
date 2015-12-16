@@ -33,7 +33,7 @@ var gatewayAddrs = []string{
 	"192.168.44.1/24",
 }
 
-const vlanCount = 4096
+const vlanCount = 1000000
 
 type Network struct {
 	Name    string `json:"name"`
