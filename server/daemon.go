@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -149,11 +150,13 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	sig_chan := make(chan os.Signal, 1)
 
 	// use os.Kill here to handle docker rm -f cxy-sdn container
-	signal.Notify(sig_chan, os.Interrupt, os.Kill)
+	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for _ = range sig_chan {
 			// TODO clean up work Delete ovs-br0
-			DeleteBridge()
+			if err := DeleteBridge(); err != nil {
+				fmt.Println("error deleting ovs-br0", err)
+			}
 
 			fmt.Println("Exit now")
 			os.Exit(0)

@@ -39,12 +39,7 @@ type Network struct {
 	Name    string `json:"name"`
 	Subnet  string `json:"subnet"`
 	Gateway string `json:"gateway"`
-	VlanID  uint   `json:"vlanid"`
-}
-type QosCtx struct {
-	Action int
-	bw     int
-	delay  int
+	VNI     uint   `json:"vni"`
 }
 
 // get the network detail of a given name
@@ -189,7 +184,7 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 	}
 
 	// get the smallest unused vlan id from data store
-	vlanID := network.VlanID
+	vlanID := network.VNI
 
 	gateway := network.Gateway
 
@@ -247,7 +242,7 @@ func DeleteNetwork(name string) error {
 	if errcode != netAgent.OK {
 		return errors.New("Error deleting network")
 	}
-	releaseVlan(network.VlanID)
+	releaseVlan(network.VNI)
 
 	if ovsClient == nil {
 		return errors.New("OVS not connected")
@@ -274,7 +269,7 @@ func syncNetwork(d *Daemon) {
 
 			if err != nil {
 				// network not exsit create the interface from net store
-				if err = AddInternalPort(ovsClient, bridgeName, network.Name, network.VlanID); err != nil {
+				if err = AddInternalPort(ovsClient, bridgeName, network.Name, network.VNI); err != nil {
 					fmt.Println("add internal port err in syncNetwork", network.Name)
 					continue
 				}

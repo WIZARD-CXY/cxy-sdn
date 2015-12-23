@@ -97,7 +97,7 @@ COMMANDS:
     status namespace pod cid
             get pod ip(aka pod infra container ip)
 
-    setQoS cid
+    setQoS cid bw delay
            set up container's egress bandwidth and latency whose container id is CID
     
 
@@ -308,7 +308,7 @@ start_cxy-sdn() {
         return 1
     fi
 
-    flags="--iface=eth0"
+    flags="--iface=eth1"
 
     while true; do
         read -p "Is this the first node in the cluster? (y/n)" yn
@@ -328,6 +328,7 @@ start_cxy-sdn() {
 
     cid=$(docker run -itd --privileged=true \
 	-v /var/run/docker.sock:/var/run/docker.sock \
+    -v /usr/bin/ovs-vsctl:/usr/bin/ovs-vsctl -v /var/run/openvswitch/db.sock:/var/run/openvswitch/db.sock \
 	-v /usr/bin/docker:/usr/bin/docker -v /proc:/hostproc -e PROCFS=/hostproc \
 	--net=host wizardcxy/cxy-sdn /cxy-sdn $flags)
 
@@ -719,10 +720,26 @@ case "$1" in
                 ;;
         esac
         ;;
-    *)
-        usage
+    qos)
+        shift
         # QoS setting
-        ##curl -X POST -d "bw=500&delay=50ms" http://127.0.0.1:8888/qos/${fullcontainerid}
-        exit 1
-        ;;
+        case "$1" in
+            add)
+                shift
+                curl -X POST -d "bw=${2}&delay=${3}" http://127.0.0.1:8888/qos/${1}
+                ;;
+            update)
+                shift
+                curl -X PUT -d "bw=${2}&delay=${3}" http://127.0.0.1:8888/qos/${1}
+                ;;
+            *)
+            log_fatal "\"cxy-sdn qos\" {add|update}"
+            exit 1
+            ;;
+        esac
+    ;;
+    *)
+    usage
+    exit 1
+    ;;
 esac

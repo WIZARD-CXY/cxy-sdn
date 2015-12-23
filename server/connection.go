@@ -84,9 +84,9 @@ func CreateBridge() (string, error) {
 }
 
 func DeleteBridge() error {
-	if ovsClient == nil {
+	/*if ovsClient == nil {
 		return errors.New("OVS not connected")
-	}
+	}*/
 	/*if err := DeleteOVSBridge(ovsClient, bridgeName, bridgeUUID); err != nil {
 		return err
 	}*/
@@ -170,7 +170,7 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 		return ovsConnection, err
 	}
 
-	portName, err := createOvsInternalPort(prefix, bridge, bridgeNetwork.VlanID)
+	portName, err := createOvsInternalPort(prefix, bridge, bridgeNetwork.VNI)
 	if err != nil {
 		return
 	}
@@ -183,11 +183,11 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 	var ip net.IP
 	if requestIp == "" {
 		// if not request a static ip, using system auto-choose
-		ip = RequestIP(fmt.Sprint(bridgeNetwork.VlanID), *subnet)
+		ip = RequestIP(fmt.Sprint(bridgeNetwork.VNI), *subnet)
 	} else {
 		// if request ip, mark it used and use it
 		ip = net.ParseIP(requestIp)
-		MarkUsed(fmt.Sprintf("%d", bridgeNetwork.VlanID), ip, *subnet)
+		MarkUsed(fmt.Sprintf("%d", bridgeNetwork.VNI), ip, *subnet)
 	}
 
 	fmt.Println("newIP is", ip)
@@ -299,7 +299,7 @@ func deleteConnection(connection OvsConnection, networkName string) error {
 		return err
 	}
 
-	ReleaseIP(ip, *subnet, fmt.Sprint(bridgeNetwork.VlanID))
+	ReleaseIP(ip, *subnet, fmt.Sprint(bridgeNetwork.VNI))
 	return nil
 }
 
