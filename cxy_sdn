@@ -352,7 +352,7 @@ stop_cxy-sdn() {
 
     for CID in $(docker ps | grep wizardcxy/cxy-sdn | awk '{ print $1; }'); do
         log_info "Stopping the cxy-sdn container $CID" | indent
-        docker rm -f ${CID} > /dev/null
+        docker kill -s=15 ${CID} > /dev/null
     done
 
     if [ -z $(docker ps | grep cxy-sdn/cxy-sdn | awk '{ print $1 }') ]; then
