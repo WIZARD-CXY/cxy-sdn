@@ -308,7 +308,7 @@ start_cxy-sdn() {
         return 1
     fi
 
-    flags="--iface=eth1"
+    flags="--iface=eth0"
 
     while true; do
         read -p "Is this the first node in the cluster? (y/n)" yn

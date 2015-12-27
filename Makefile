@@ -1,4 +1,4 @@
-all: build test push
+all: build push
 
 build:
 	GO15VENDOREXPERIMENT=1 go build -v

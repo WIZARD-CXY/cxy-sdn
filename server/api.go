@@ -7,11 +7,12 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
+
+	"github.com/gorilla/mux"
 )
 
 type HttpErr struct {

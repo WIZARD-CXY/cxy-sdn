@@ -9,11 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/consul/command"
-	"github.com/hashicorp/consul/watch"
-	"github.com/mitchellh/cli"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -21,6 +16,12 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/golang/glog"
+	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/consul/command"
+	"github.com/hashicorp/consul/watch"
+	"github.com/mitchellh/cli"
 )
 
 func StartAgent(serverMode bool, bootstrap bool, bindInterface string, dataDir string) error {
@@ -185,7 +186,7 @@ func Get(store string, key string) ([]byte, int, bool) {
 
 	defer resp.Body.Close()
 
-	glog.Infof("Status of Get %s for %s", resp.Status, url)
+	//glog.Infof("Status of Get %s for %s", resp.Status, url)
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		var jsonBody []KVRespBody
@@ -254,7 +255,7 @@ func Put(store string, key string, value []byte, oldVal []byte) int {
 	}
 
 	url := CONSUL_KV_BASE_URL + store + "/" + key + "?cas=" + strconv.Itoa(casIndex)
-	glog.Infof("Updating KV pair for %s %s %s %d", url, key, value, casIndex)
+	//glog.Infof("Updating KV pair for %s %s %s %d", url, key, value, casIndex)
 
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(value))
 

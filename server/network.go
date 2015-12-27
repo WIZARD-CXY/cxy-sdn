@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/WIZARD-CXY/cxy-sdn/agent"
-	"github.com/WIZARD-CXY/cxy-sdn/util"
 	"math"
 	"net"
 	"time"
+
+	"github.com/WIZARD-CXY/cxy-sdn/agent"
+	"github.com/WIZARD-CXY/cxy-sdn/util"
 )
 
 const networkStore = "networkStore"
@@ -183,9 +184,6 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 		return network, errors.New("Network not exist")
 	}
 
-	// get the smallest unused vlan id from data store
-	vlanID := network.VNI
-
 	gateway := network.Gateway
 
 	addr, err := util.GetIfaceAddr(name)
@@ -193,7 +191,7 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 	if err != nil {
 		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
 
-		if err = AddInternalPort(ovsClient, bridgeName, name, vlanID); err != nil {
+		if err = AddInternalPort(ovsClient, bridgeName, name, network.VNI); err != nil {
 			return network, err
 		}
 		time.Sleep(1 * time.Second)
@@ -221,7 +219,7 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 		if err != nil {
 			return nil, err
 		}
-		network = &Network{name, subnet.String(), gateway, vlanID}
+		network = &Network{name, subnet.String(), gateway, network.VNI}
 	}
 
 	if err = setupIPTables(network.Name, network.Subnet); err != nil {

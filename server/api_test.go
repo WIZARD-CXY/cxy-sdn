@@ -145,7 +145,7 @@ func TestSetNetworksApi(t *testing.T) {
 		Name:    "foo",
 		Subnet:  "10.10.10.0/24",
 		Gateway: "10.10.10.1",
-		VlanID:  uint(1),
+		VNI:     uint(1),
 	}
 	data, _ := json.Marshal(network)
 

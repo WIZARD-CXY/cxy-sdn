@@ -2,12 +2,13 @@ package server
 
 import (
 	"fmt"
-	"github.com/codegangsta/cli"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/codegangsta/cli"
 )
 
 // concurrent-safe map
@@ -144,8 +145,6 @@ func (d *Daemon) Run(ctx *cli.Context) {
 
 	//start a goroutine to manage connection
 	go connHandler(d)
-
-	go monitorNetworkTraffic(d)
 
 	sig_chan := make(chan os.Signal, 1)
 

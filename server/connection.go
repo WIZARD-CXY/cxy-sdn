@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+
 	"net"
 	"os"
 	"os/exec"
@@ -134,10 +136,13 @@ func connHandler(d *Daemon) {
 				continue
 			}
 			fmt.Printf("connDetails %v\n", connDetail)
+
 			c.Connection.OvsPortID = connDetail.Name
 			c.Connection.ConnectionDetail = connDetail
 
 			d.connections.Set(c.Connection.ContainerID, c.Connection)
+			//fire up a goroutine to monitor this container's network
+			go getInterfaceInfo(d, c.Connection, 2)
 			c.Result <- c.Connection
 		case deleteConn:
 			deleteConnection(c.Connection.ConnectionDetail, c.Connection.Network)
@@ -374,6 +379,10 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 
 	networks, _ := GetNetworks()
 	for _, network := range networks {
+
+		if network.Name == bridgeName {
+			continue
+		}
 		outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "-o", network.Name, "-j", "DROP"}
 		output, err = installRule(outboundArgs...)
 		if err != nil {
@@ -573,76 +582,52 @@ func installQos(args ...string) ([]byte, error) {
 	return output, err
 }
 
-// monitor each container network interface's egress and ingress traffic
-func monitorNetworkTraffic(d *Daemon) {
-	//loop through all containers get their net interface info
+func getInterfaceInfo(d *Daemon, con *Connection, interval float64) {
+	t := time.NewTicker(time.Second * time.Duration(interval))
+	fmt.Println("start monitoring", con.ContainerID)
+
 	for {
+		data, err := ioutil.ReadFile("/hostproc/" + con.ContainerPID + "/net/dev")
 
-		for _, con := range d.connections.rm {
-			preRx := con.(*Connection).RXTotal
-			preTx := con.(*Connection).TXTotal
-
-			rx, tx := getInterfaceInfo(con.(*Connection))
-
-			// may cost much because of lock
-			d.connections.Lock()
-			con.(*Connection).RXTotal = rx
-			con.(*Connection).TXTotal = tx
-
-			// rate not very precise
-			con.(*Connection).RXRate = float64(rx-preRx) * 8 / 2
-			con.(*Connection).TXRate = float64(tx-preTx) * 8 / 2
-			d.connections.Unlock()
+		if err != nil {
+			//container is deleted, no need to monitor
+			break
 		}
 
-		time.Sleep(2 * time.Second)
+		ss := string(data)
+
+		idx := strings.Index(ss, con.OvsPortID)
+		line := ss[idx:]
+
+		aa := strings.Fields(line)
+
+		rx, _ := strconv.ParseUint(aa[1], 10, 64)
+		tx, _ := strconv.ParseUint(aa[9], 10, 64)
+
+		rx /= 1024
+		tx /= 1024
+
+		// get the interface rx bytes
+		d.connections.Lock()
+
+		// first check the container is deleted or not,
+		// if deleted, stop the monitor
+		if _, ok := d.connections.rm[con.ContainerID]; !ok {
+			d.connections.Unlock()
+			break
+		}
+
+		preRx := con.RXTotal
+		preTx := con.TXTotal
+
+		con.RXTotal = rx
+		con.TXTotal = tx
+
+		con.RXRate = float64(rx-preRx) * 8 / interval
+		con.TXRate = float64(tx-preTx) * 8 / interval
+		d.connections.Unlock()
+
+		<-t.C
 	}
-
-}
-
-func getInterfaceInfo(con *Connection) (rx, tx uint64) {
-	// Lock the OS Thread so we don't accidentally switch namespaces
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	// save the old netns
-	origns, _ := netns.Get()
-
-	defer origns.Close()
-
-	targetns, _ := netns.GetFromName(con.ContainerPID)
-
-	defer targetns.Close()
-
-	// switch to targetns
-	netns.Set(targetns)
-
-	// In the end switch back to the original namespace
-	defer netns.Set(origns)
-
-	// get the interface rx bytes
-	path, _ := exec.LookPath("ifconfig")
-
-	args := []string{con.OvsPortID}
-	output, _ := exec.Command(path, args...).CombinedOutput()
-
-	ss := string(output[:len(output)-1]) //trim trailing '/n'
-
-	idx := strings.Index(ss, "RX bytes:")
-	if idx == -1 {
-		return 0, 0
-	}
-	lastline := ss[idx:]
-	aa := strings.Split(lastline, " ")
-	rxbytes := strings.Split(aa[1], ":")[1]
-	txbytes := strings.Split(aa[6], ":")[1]
-
-	rx, _ = strconv.ParseUint(rxbytes, 10, 64)
-	tx, _ = strconv.ParseUint(txbytes, 10, 64)
-
-	rx /= 1024
-	tx /= 1024
-
-	return
 
 }
