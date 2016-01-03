@@ -571,7 +571,7 @@ func TestDeleteConn(t *testing.T) {
 }
 
 // Qos test
-func TestCreateQosApi(t *testing.T) {
+/*func TestCreateQosApi(t *testing.T) {
 	d := NewDaemon()
 	connection := &Connection{
 		ContainerID:   "abc123",
@@ -615,4 +615,4 @@ func TestUpdateQos(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("Expected %v:\n\tReceived: %v", "200", response.Code)
 	}
-}
+}*/

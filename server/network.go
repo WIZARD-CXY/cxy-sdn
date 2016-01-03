@@ -99,7 +99,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	}
 
 	// get the smallest unused vlan id from data store
-	vlanID, err := allocateVlan()
+	VNI, err := allocateVNI()
 
 	if err != nil {
 		return nil, err
@@ -112,11 +112,11 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	if err != nil {
 		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
 
-		gateway = RequestIP(fmt.Sprint(vlanID), *subnet)
+		gateway = RequestIP(fmt.Sprint(VNI), *subnet)
 
-		network = &Network{name, subnet.String(), gateway.String(), vlanID}
+		network = &Network{name, subnet.String(), gateway.String(), VNI}
 
-		if err = AddInternalPort(ovsClient, bridgeName, name, vlanID); err != nil {
+		if err = AddInternalPort(ovsClient, bridgeName, name, VNI); err != nil {
 			return network, err
 		}
 		time.Sleep(1 * time.Second)
@@ -139,16 +139,16 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		ifaceAddr := addr.String()
 		// even though the interface exist, mark its IP as used by using RequestIP to
 		// let the ipam and I happy
-		RequestIP(fmt.Sprint(vlanID), *subnet)
+		RequestIP(fmt.Sprint(VNI), *subnet)
 
-		fmt.Printf("Interface %s already exists with IP %s, subnet %s, in %d vlan\n", name, ifaceAddr, subnet.String(), vlanID)
+		fmt.Printf("Interface %s already exists with IP %s, subnet %s, in %d vlan\n", name, ifaceAddr, subnet.String(), VNI)
 
 		gateway, subnet, err = net.ParseCIDR(ifaceAddr)
 
 		if err != nil {
 			return nil, err
 		}
-		network = &Network{name, subnet.String(), gateway.String(), vlanID}
+		network = &Network{name, subnet.String(), gateway.String(), VNI}
 	}
 
 	netBytes, _ := json.Marshal(network)
@@ -160,8 +160,8 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	err2 := netAgent.Put(networkStore, name, netBytes, nil)
 
 	if err2 == netAgent.OUTDATED {
-		releaseVlan(vlanID)
-		ReleaseIP(gateway, *subnet, fmt.Sprint(vlanID))
+		releaseVNI(VNI)
+		ReleaseIP(gateway, *subnet, fmt.Sprint(VNI))
 		return CreateNetwork(name, subnet)
 	}
 
@@ -240,7 +240,7 @@ func DeleteNetwork(name string) error {
 	if errcode != netAgent.OK {
 		return errors.New("Error deleting network")
 	}
-	releaseVlan(network.VNI)
+	releaseVNI(network.VNI)
 
 	if ovsClient == nil {
 		return errors.New("OVS not connected")
@@ -322,7 +322,7 @@ func syncNetwork(d *Daemon) {
 	}
 }
 
-func allocateVlan() (uint, error) {
+func allocateVNI() (uint, error) {
 	vlanBytes, _, ok := netAgent.Get(vlanStore, "vlan")
 
 	// not put the key already
@@ -333,19 +333,19 @@ func allocateVlan() (uint, error) {
 	curVal := make([]byte, vlanCount/8)
 	copy(curVal, vlanBytes)
 
-	vlanID := util.TestAndSet(vlanBytes)
+	VNI := util.TestAndSet(vlanBytes)
 
-	if vlanID > vlanCount {
-		return uint(vlanID), errors.New("All vlanID have been used")
+	if VNI > vlanCount {
+		return uint(VNI), errors.New("All VNI have been used")
 	}
 
 	netAgent.Put(vlanStore, "vlan", vlanBytes, curVal)
 
-	return uint(vlanID), nil
+	return uint(VNI), nil
 
 }
 
-func releaseVlan(vlanID uint) {
+func releaseVNI(VNI uint) {
 	oldVal, _, ok := netAgent.Get(vlanStore, "vlan")
 
 	if !ok {
@@ -354,10 +354,10 @@ func releaseVlan(vlanID uint) {
 	curVal := make([]byte, vlanCount/8)
 	copy(curVal, oldVal)
 
-	util.Clear(curVal, vlanID-1)
+	util.Clear(curVal, VNI-1)
 	err := netAgent.Put(vlanStore, "vlan", curVal, oldVal)
 	if err == netAgent.OUTDATED {
-		releaseVlan(vlanID)
+		releaseVNI(VNI)
 	}
 }
 func GetAvailableGwAddress(bridgeIP string) (gwaddr string, err error) {
@@ -403,7 +403,7 @@ func GetAvailableSubnet() (subnet *net.IPNet, err error) {
 // ipStore manage the cluster ip resource
 // key is the vlan/subnet, value is the available ip address bytes
 // Get an IP from the unused subnet and mark it as used
-func RequestIP(vlanID string, subnet net.IPNet) net.IP {
+func RequestIP(VNI string, subnet net.IPNet) net.IP {
 	ipCount := util.IPCount(subnet)
 	bc := int(ipCount / 8)
 	partial := int(math.Mod(ipCount, float64(8)))
@@ -412,7 +412,7 @@ func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 		bc += 1
 	}
 
-	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
+	oldArray, _, ok := netAgent.Get(ipStore, VNI+"-"+subnet.String())
 
 	if !ok {
 		oldArray = make([]byte, bc)
@@ -424,10 +424,10 @@ func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 
 	pos := util.TestAndSet(newArray)
 
-	err := netAgent.Put(ipStore, vlanID+"-"+subnet.String(), newArray, oldArray)
+	err := netAgent.Put(ipStore, VNI+"-"+subnet.String(), newArray, oldArray)
 
 	if err == netAgent.OUTDATED {
-		return RequestIP(vlanID, subnet)
+		return RequestIP(VNI, subnet)
 	}
 
 	var num uint32
@@ -454,8 +454,8 @@ func RequestIP(vlanID string, subnet net.IPNet) net.IP {
 }
 
 // Mark a specified ip as used, return true as success
-func MarkUsed(vlanID string, addr net.IP, subnet net.IPNet) bool {
-	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
+func MarkUsed(VNI string, addr net.IP, subnet net.IPNet) bool {
+	oldArray, _, ok := netAgent.Get(ipStore, VNI+"-"+subnet.String())
 
 	if !ok {
 		// the kv pair not exist yet
@@ -478,10 +478,10 @@ func MarkUsed(vlanID string, addr net.IP, subnet net.IPNet) bool {
 
 	util.Set(newArray, pos)
 
-	err2 := netAgent.Put(ipStore, vlanID+"-"+subnet.String(), newArray, oldArray)
+	err2 := netAgent.Put(ipStore, VNI+"-"+subnet.String(), newArray, oldArray)
 
 	if err2 == netAgent.OUTDATED {
-		MarkUsed(vlanID, addr, subnet)
+		MarkUsed(VNI, addr, subnet)
 	}
 
 	return true
@@ -489,8 +489,8 @@ func MarkUsed(vlanID string, addr net.IP, subnet net.IPNet) bool {
 }
 
 // Release the given IP from the subnet of vlan
-func ReleaseIP(addr net.IP, subnet net.IPNet, vlanID string) bool {
-	oldArray, _, ok := netAgent.Get(ipStore, vlanID+"-"+subnet.String())
+func ReleaseIP(addr net.IP, subnet net.IPNet, VNI string) bool {
+	oldArray, _, ok := netAgent.Get(ipStore, VNI+"-"+subnet.String())
 
 	if !ok {
 		return false
@@ -512,10 +512,10 @@ func ReleaseIP(addr net.IP, subnet net.IPNet, vlanID string) bool {
 
 	util.Clear(newArray, pos)
 
-	err2 := netAgent.Put(ipStore, vlanID+"-"+subnet.String(), newArray, oldArray)
+	err2 := netAgent.Put(ipStore, VNI+"-"+subnet.String(), newArray, oldArray)
 
 	if err2 == netAgent.OUTDATED {
-		return ReleaseIP(addr, subnet, vlanID)
+		return ReleaseIP(addr, subnet, VNI)
 	}
 
 	return true

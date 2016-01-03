@@ -90,8 +90,8 @@ func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) (string
 	mutateUuid := []libovsdb.UUID{libovsdb.UUID{namedBridgeUuid}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "insert", mutateSet)
-	fmt.Println()
-	fmt.Println("+++++++++++++++", getRootUuid())
+	/*	fmt.Println()
+		fmt.Println("+++++++++++++++", getRootUuid())*/
 
 	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 

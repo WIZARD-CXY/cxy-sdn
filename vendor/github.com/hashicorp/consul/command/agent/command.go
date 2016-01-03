@@ -394,7 +394,8 @@ func (c *Command) setupAgent(config *Config, logOutput io.Writer, logWriter *log
 		}
 		c.dnsServer = server
 	}
-
+	//disable update check
+	config.DisableUpdateCheck = true
 	// Setup update checking
 	if !config.DisableUpdateCheck {
 		version := config.Version

@@ -12,7 +12,7 @@ var subnetArray []*net.IPNet
 var bridgeUUID string
 
 func TestStartAgent(t *testing.T) {
-	err := InitAgent("eth1", true)
+	err := InitAgent("eth0", true)
 
 	if err != nil {
 		t.Errorf("Error starting agent")
@@ -81,6 +81,45 @@ func TestGetNetwork(t *testing.T) {
 	}
 }
 
+func TestNetworkCleanup(t *testing.T) {
+	if os.Getuid() != 0 {
+		msg := "Skipped TestNetworkCleanup test because it requires root privileges."
+		fmt.Println(msg)
+		t.Skip(msg)
+	}
+	for i := 0; i < len(subnetArray); i++ {
+		err := DeleteNetwork(fmt.Sprintf("Network-%d", i+1))
+		if err != nil {
+			t.Error("Error Deleting Network", err)
+		}
+	}
+
+	// delete the ovs bridge
+	if err := DeleteBridge(); err != nil {
+		t.Error("Delete ovs bridge failed", err)
+	}
+}
+
+func TestAllocateandReleaseVNI(t *testing.T) {
+	for i := 1; i <= 10; i++ {
+		vni, err := allocateVNI()
+
+		if err != nil || vni != uint(i) {
+			t.Error("1.allocate vni wrong at", vni, i)
+		}
+	}
+	for i := 1; i <= 5; i++ {
+		releaseVNI(uint(2 * i))
+	}
+
+	for i := 1; i <= 5; i++ {
+		vni, err := allocateVNI()
+		if err != nil || vni != uint(2*i) {
+			t.Error("2.allocate vni wrong at", vni, i)
+		}
+	}
+}
+
 func TestRequestandReleaseIP(t *testing.T) {
 	TestCount := 5
 
@@ -115,25 +154,6 @@ func TestRequestandReleaseIP(t *testing.T) {
 
 	if int(addr[3]) != 4 {
 		t.Error(addr.String())
-	}
-}
-
-func TestNetworkCleanup(t *testing.T) {
-	if os.Getuid() != 0 {
-		msg := "Skipped TestNetworkCleanup test because it requires root privileges."
-		fmt.Println(msg)
-		t.Skip(msg)
-	}
-	for i := 0; i < len(subnetArray); i++ {
-		err := DeleteNetwork(fmt.Sprintf("Network-%d", i+1))
-		if err != nil {
-			t.Error("Error Deleting Network", err)
-		}
-	}
-
-	// delete the ovs bridge
-	if err := DeleteBridge(bridgeUUID); err != nil {
-		t.Error("Delete ovs bridge failed", err)
 	}
 }
 

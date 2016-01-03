@@ -33,7 +33,7 @@ func (m *SafeMap) Get(k string) interface{} {
 	return nil
 }
 
-// returns false if k is already in the sm and v is same with the old value
+// returns false if k is already in the rm and v is same with the old value
 func (m *SafeMap) Set(k string, v interface{}) bool {
 	m.Lock()
 	defer m.Unlock()
