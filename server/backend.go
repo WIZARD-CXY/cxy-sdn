@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/WIZARD-CXY/cxy-sdn/agent"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
-	"os"
 )
 
 const dataDir = "/tmp/cxy/"
@@ -13,10 +14,10 @@ type Listener struct{}
 
 var listener Listener
 
-func InitAgent(bindInterface string, bootstrap bool) error {
-	// simple set up
-	// if one is started as bootstrap node, start it in serverMode
-	err := netAgent.StartAgent(bootstrap, bootstrap, bindInterface, dataDir)
+func InitAgent(bindInterface string, isServer bool, expectServerNum string) error {
+	// advance setup server mode
+	// ref https://www.consul.io/docs/guides/bootstrapping.html
+	err := netAgent.StartAgent(isServer, expectServerNum, bindInterface, dataDir)
 
 	if err == nil {
 		go netAgent.RegisterForNodeUpdates(listener)

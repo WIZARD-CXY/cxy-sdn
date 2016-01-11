@@ -254,12 +254,7 @@ func joinCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 
 	fmt.Println("Join to cluster", addr[0])
 
-	ip := net.ParseIP(addr[0])
-	if ip == nil {
-		return &HttpErr{http.StatusBadRequest, "Invalid IP address"}
-	}
-
-	d.clusterChan <- &NodeCtx{ip.String(), nodeJoin}
+	d.clusterChan <- &NodeCtx{addr[0], nodeJoin}
 	return nil
 }
 

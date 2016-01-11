@@ -15,6 +15,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -24,7 +25,7 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func StartAgent(serverMode bool, bootstrap bool, bindInterface string, dataDir string) error {
+func StartAgent(serverMode bool, expectServerNum string, bindInterface string, dataDir string) error {
 	bindAddr := ""
 
 	if bindInterface != "" {
@@ -52,7 +53,7 @@ func StartAgent(serverMode bool, bootstrap bool, bindInterface string, dataDir s
 
 	watchForExistingRegisteredUpdates()
 
-	go startConsul(serverMode, bootstrap, bindAddr, dataDir, errChan)
+	go startConsul(serverMode, expectServerNum, bindAddr, dataDir, errChan)
 
 	select {
 	case <-errChan:
@@ -62,15 +63,12 @@ func StartAgent(serverMode bool, bootstrap bool, bindInterface string, dataDir s
 	return nil
 }
 
-func startConsul(serverMode bool, bootstrap bool, bindAddress string, dataDir string, eCh chan int) {
+func startConsul(serverMode bool, expectServerNum string, bindAddress string, dataDir string, eCh chan int) {
 	args := []string{"agent", "-data-dir", dataDir}
 
 	if serverMode {
 		args = append(args, "-server")
-	}
-
-	if bootstrap {
-		args = append(args, "-bootstrap-expect=1")
+		args = append(args, "-bootstrap-expect="+expectServerNum)
 	}
 
 	if bindAddress != "" {
@@ -106,17 +104,23 @@ func Execute(args ...string) int {
 const CONSUL_CATALOG_BASE_URL = "http://localhost:8500/v1/catalog/"
 
 // Node operation related
-
 type Node struct {
 	Name    string `json:"Name,omitempty"`
 	Address string `json:"Addr,ommitempty"`
 }
 
 func Join(addr string) error {
-	ret := Execute("join", addr)
+	args := []string{"join"}
+	ips := strings.Split(addr, " ")
+
+	for _, ip := range ips {
+		args = append(args, ip)
+	}
+
+	ret := Execute(args...)
 
 	if ret != 0 {
-		glog.Errorf("Error (%d) joining %s with consul peers", ret, addr)
+		// glog.Errorf("Error (%d) joining %s with consul peers", ret, addr)
 		return errors.New("Error joining the cluster")
 	}
 
@@ -426,6 +430,7 @@ func register(wtype WatchType, params map[string]interface{}, handler watch.Hand
 
 var nodeCache []*api.Node
 
+// return X-Y
 func compare(X, Y []*api.Node) []*api.Node {
 	m := make(map[string]bool)
 
@@ -434,6 +439,7 @@ func compare(X, Y []*api.Node) []*api.Node {
 	}
 
 	var ret []*api.Node
+
 	for _, x := range X {
 		if m[x.Address] {
 			continue

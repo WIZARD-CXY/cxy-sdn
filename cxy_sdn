@@ -311,10 +311,12 @@ start_cxy-sdn() {
     flags="--iface=eth0"
 
     while true; do
-        read -p "Is this the first node in the cluster? (y/n)" yn
+        read -p "Is this a server node in the cluster? (y/n)" yn
         case $yn in
             [Yy]* )
-                flags="$flags --bootstrap=true"
+                flags="$flags --server=true"
+                read -p "what is the server number: " num
+                flags="$flags --expectedServerNum=$num"
                 break
                 ;;
             [Nn]* )
@@ -355,7 +357,7 @@ stop_cxy-sdn() {
         docker kill -s=15 ${CID} > /dev/null
     done
 
-    if [ -z $(docker ps | grep cxy-sdn/cxy-sdn | awk '{ print $1 }') ]; then
+    if [ -z $(docker ps | grep wizardcxy/cxy-sdn | awk '{ print $1 }') ]; then
         log_info "All cxy-sdn agent containers are stopped. Please run \"cxy-sdn agent start\" to start them again"
     fi
 }
@@ -474,8 +476,8 @@ container_delete() {
 }
 
 cluster_join(){
-    log_info "Requesting cxy-sdn to join the cluster at $1"
-    curl -s -X POST http://localhost:8888/cluster/join?address=$1
+    log_info "Requesting cxy-sdn to join the cluster at $*"
+    curl -s -X POST http://localhost:8888/cluster/join?address=$*
 }
 
 cluster_leave(){
