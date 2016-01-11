@@ -65,7 +65,7 @@ func (m *SafeMap) Delete(k string) {
 
 type Daemon struct {
 	bridgeConf     *BridgeConf
-	isBootstrap    bool
+	isServer       bool
 	connections    *SafeMap // each connection is a connected container, key is containerID
 	bindInterface  string
 	clusterChan    chan *NodeCtx
@@ -97,7 +97,7 @@ func NewDaemon() *Daemon {
 	}
 }
 func (d *Daemon) Run(ctx *cli.Context) {
-	d.isBootstrap = ctx.Bool("bootstrap")
+	d.isServer = ctx.Bool("server")
 
 	// set up dir use for netns
 	if err := os.Mkdir("/var/run/netns", 0777); err != nil {
@@ -113,14 +113,8 @@ func (d *Daemon) Run(ctx *cli.Context) {
 
 		fmt.Printf("Using interface %s\n", d.bindInterface)
 
-		if err := InitAgent(d.bindInterface, d.isBootstrap); err != nil {
+		if err := InitAgent(d.bindInterface, d.isServer, ctx.String("expectedServerNum")); err != nil {
 			fmt.Println("error in Init netAgent")
-		}
-
-		// wait a while for agent to fully start
-		time.Sleep(3 * time.Second)
-		if d.isBootstrap {
-			d.readyChan <- true
 		}
 	}()
 
@@ -134,9 +128,11 @@ func (d *Daemon) Run(ctx *cli.Context) {
 
 		//wait data store backend ready
 		<-d.readyChan
+		// wait 2 seconds for raft to elect a leader
+		time.Sleep(2 * time.Second)
 		fmt.Println("ready to work !")
 
-		if _, err := CreateDefaultNetwork(d.isBootstrap); err != nil {
+		if _, err := CreateDefaultNetwork(d.isServer); err != nil {
 			fmt.Println("Create cxy network error", err.Error())
 		}
 

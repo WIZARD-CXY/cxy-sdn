@@ -76,13 +76,13 @@ func GetNetworks() ([]Network, error) {
 	return networks, nil
 }
 
-func CreateDefaultNetwork(isBootstrap bool) (*Network, error) {
+func CreateDefaultNetwork(isServer bool) (*Network, error) {
 	subnet, err := GetAvailableSubnet()
 
 	if err != nil {
 		return &Network{}, err
 	}
-	if isBootstrap {
+	if isServer {
 		return CreateNetwork(defaultNetwork, subnet)
 	} else {
 		return CreateNetwork2(defaultNetwork, subnet)

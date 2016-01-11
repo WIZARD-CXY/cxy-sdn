@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestStartAgent(t *testing.T) {
-	err := StartAgent(true, true, "", "data-dir")
+	err := StartAgent(true, "1", "", "data-dir")
 	if err != nil {
 		t.Error("Error starting Consul ", err)
 	}

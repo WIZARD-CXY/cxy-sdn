@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/WIZARD-CXY/cxy-sdn/server"
 	"github.com/codegangsta/cli"
-	"os"
 )
 
 func init() {
@@ -23,8 +24,13 @@ func main() {
 			Usage: "Network Interface to bind, default is eth0",
 		},
 		cli.BoolFlag{
-			Name:  "bootstrap, b",
-			Usage: "bootstrap for the first instance being started",
+			Name:  "server, s",
+			Usage: "Indicate server mode or not",
+		},
+		cli.StringFlag{
+			Name:  "expectedServerNum, n",
+			Value: "1",
+			Usage: "Indicate the Server node num",
 		},
 	}
 
