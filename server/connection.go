@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 
 	"net"
 	"os"
@@ -51,7 +52,7 @@ func init() {
 	var err error
 	ovsClient, err = ovs_connect()
 	if err != nil {
-		fmt.Println("Error connecting OVS ", err)
+		log.Println("Error connecting OVS ", err)
 	} else {
 		ovsClient.Register(notifier{})
 	}
@@ -124,18 +125,18 @@ func DeletePeer(peerIp string) error {
 func connHandler(d *Daemon) {
 	for {
 		c := <-d.connectionChan
-		fmt.Println("receive new conn")
+		log.Println("receive new conn")
 
 		switch c.Action {
 		case addConn:
 			connDetail, err := addConnection(c.Connection.ContainerPID, c.Connection.Network, c.Connection.RequestIp)
 			if err != nil {
-				fmt.Printf("conhandler err is %+v\n", err)
+				log.Printf("conhandler err is %+v\n", err)
 				c.Connection.OvsPortID = "-1"
 				c.Result <- c.Connection
 				continue
 			}
-			fmt.Printf("connDetails %v\n", connDetail)
+			log.Printf("connDetails %v\n", connDetail)
 
 			c.Connection.OvsPortID = connDetail.Name
 			c.Connection.ConnectionDetail = connDetail
@@ -168,7 +169,7 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 	if networkName == "" {
 		networkName = defaultNetwork
 	}
-	fmt.Println("haha network name", networkName, nspid)
+	log.Println("haha network name", networkName, nspid)
 
 	bridgeNetwork, err := GetNetwork(networkName)
 	if err != nil {
@@ -181,7 +182,7 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 	}
 	// Add a dummy sleep to make sure the interface is seen by the subsequent calls.
 	time.Sleep(time.Second * 1)
-	fmt.Println("newportName is", portName)
+	log.Println("newportName is", portName)
 
 	_, subnet, _ := net.ParseCIDR(bridgeNetwork.Subnet)
 
@@ -195,7 +196,7 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 		MarkUsed(fmt.Sprintf("%d", bridgeNetwork.VNI), ip, *subnet)
 	}
 
-	fmt.Println("newIP is", ip)
+	log.Println("newIP is", ip)
 	mac := generateMacAddr(ip).String()
 
 	subnetString := subnet.String()
@@ -229,7 +230,7 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 
 	// set port in targetns
 	if err = util.SetInterfaceInNamespaceFd(portName, uintptr(int(targetns))); err != nil {
-		fmt.Println("Set port in ns err in addcon")
+		log.Println("Set port in ns err in addcon")
 		return
 	}
 
@@ -242,27 +243,27 @@ func addConnection(nspid, networkName, requestIp string) (ovsConnection OvsConne
 	defer netns.Set(origns)
 
 	if err = util.SetMtu(portName, mtu); err != nil {
-		fmt.Println("set mtu error in addCon")
+		log.Println("set mtu error in addCon")
 		return
 	}
 
 	if err = util.SetInterfaceIp(portName, ip.String()+subnetPrefix); err != nil {
-		fmt.Println("SetInterfaceip error in addcon")
+		log.Println("SetInterfaceip error in addcon")
 		return
 	}
 
 	if err = util.SetInterfaceMac(portName, mac); err != nil {
-		fmt.Println("SetInterfacemac error in addcon")
+		log.Println("SetInterfacemac error in addcon")
 		return
 	}
 
 	if err = util.InterfaceUp(portName); err != nil {
-		fmt.Println("Interfaceup error in addcon")
+		log.Println("Interfaceup error in addcon")
 		return
 	}
 
 	if err = util.SetDefaultGateway(bridgeNetwork.Gateway, portName); err != nil {
-		fmt.Println("SetdefaultGateway error in addcon")
+		log.Println("SetdefaultGateway error in addcon")
 		return
 	}
 
@@ -365,15 +366,15 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		iptables -A FORWARD -i %bridgeName ! -o %oldGateway -j DROP
 	*/
 
-	fmt.Println("Setting up iptables")
+	log.Println("Setting up iptables")
 	natArgs := []string{"-t", "nat", "-A", "POSTROUTING", "-s", bridgeIP, "!", "-o", bridgeName, "-j", "MASQUERADE"}
 	output, err := installRule(natArgs...)
 	if err != nil {
-		fmt.Println("Unable to enable network bridge NAT:", err)
+		log.Println("Unable to enable network bridge NAT:", err)
 		return fmt.Errorf("Unable to enable network bridge NAT: %s", err)
 	}
 	if len(output) != 0 {
-		fmt.Println("Error enabling network bridge NAT:", output)
+		log.Println("Error enabling network bridge NAT:", output)
 		return fmt.Errorf("Error enabling network bridge NAT: %s", output)
 	}
 
@@ -386,11 +387,11 @@ func setupIPTables(bridgeName string, bridgeIP string) error {
 		outboundArgs := []string{"-A", "FORWARD", "-i", bridgeName, "-o", network.Name, "-j", "DROP"}
 		output, err = installRule(outboundArgs...)
 		if err != nil {
-			fmt.Println("Unable to disable network outbound forwarding:", err)
+			log.Println("Unable to disable network outbound forwarding:", err)
 			return fmt.Errorf("Unable to disable network outbound forwarding: %s", err)
 		}
 		if len(output) != 0 {
-			fmt.Println("Error disable network outbound forwarding:", output)
+			log.Println("Error disable network outbound forwarding:", output)
 			return fmt.Errorf("Error disable network outbound forwarding: %s", output)
 		}
 
@@ -425,7 +426,7 @@ func (n notifier) Stolen([]interface{}) {
 func (n notifier) Echo([]interface{}) {
 }
 func (n notifier) Disconnected(ovsClient *libovsdb.OvsdbClient) {
-	fmt.Println("OVS Disconnected. Retrying...")
+	log.Println("OVS Disconnected. Retrying...")
 }
 
 func addQos(d *Daemon, containerId, bw, delay string) error {
@@ -467,7 +468,7 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 		args := []string{"qdisc", "add", "dev", con.OvsPortID, "root", "handle", "1:0", "netem", "delay", delay + "ms"}
 
 		if _, err = installQos(args...); err != nil {
-			fmt.Println("install qos delay error in addQos")
+			log.Println("install qos delay error in addQos")
 			return err
 		}
 		con.Delay = delay
@@ -478,7 +479,7 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 		args := []string{"qdisc", "add", "dev", con.OvsPortID, "root", "handle", "1:0", "netem", "delay", "0ms"}
 
 		if _, err = installQos(args...); err != nil {
-			fmt.Println("install qos delay error in addQos")
+			log.Println("install qos delay error in addQos")
 			return err
 		}
 		con.Delay = "0"
@@ -489,7 +490,7 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 		args := []string{"qdisc", "add", "dev", con.OvsPortID, "parent", "1:1", "handle", "10:", "tbf", "rate", bw + "kbit", "buffer", "1600", "limit", "3000"}
 
 		if _, err = installQos(args...); err != nil {
-			fmt.Println("install qos bw error in addQos")
+			log.Println("install qos bw error in addQos")
 			return err
 		}
 		con.BandWidth = bw
@@ -498,7 +499,7 @@ func addQos(d *Daemon, containerId, bw, delay string) error {
 		args := []string{"qdisc", "add", "dev", con.OvsPortID, "parent", "1:1", "handle", "10:", "tbf", "rate", "8000000kbit", "buffer", "1600", "limit", "3000"}
 
 		if _, err = installQos(args...); err != nil {
-			fmt.Println("install qos bw error in addQos")
+			log.Println("install qos bw error in addQos")
 			return err
 		}
 		// magic number just a large bw
@@ -547,7 +548,7 @@ func changeQos(d *Daemon, containerId, bw, delay string) error {
 		args := []string{"qdisc", "change", "dev", con.OvsPortID, "root", "handle", "1:0", "netem", "delay", delay + "ms"}
 
 		if _, err = installQos(args...); err != nil {
-			fmt.Println("install qos delay error in changeQos")
+			log.Println("install qos delay error in changeQos")
 			return err
 		}
 		con.Delay = delay
@@ -559,7 +560,7 @@ func changeQos(d *Daemon, containerId, bw, delay string) error {
 		args := []string{"qdisc", "change", "dev", con.OvsPortID, "parent", "1:1", "handle", "10:", "tbf", "rate", bw + "kbit", "buffer", "1600", "limit", "3000"}
 
 		if _, err = installQos(args...); err != nil {
-			fmt.Println("install qos bw error in changeQos")
+			log.Println("install qos bw error in changeQos")
 			return err
 		}
 		con.BandWidth = bw
@@ -584,7 +585,7 @@ func installQos(args ...string) ([]byte, error) {
 
 func getInterfaceInfo(d *Daemon, con *Connection, interval float64) {
 	t := time.NewTicker(time.Second * time.Duration(interval))
-	fmt.Println("start monitoring", con.ContainerID)
+	log.Println("start monitoring", con.ContainerID)
 
 	for {
 		data, err := ioutil.ReadFile("/hostproc/" + con.ContainerPID + "/net/dev")

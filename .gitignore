@@ -21,8 +21,8 @@ _book
 
 #coverage files
 server/coverage.out
-agent/data-dir/
-agent/coverage.out
+netAgent/data-dir/
+netAgent/coverage.out
 util/coverage.out
 
 cxy-sdn

@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"time"
 
-	"github.com/WIZARD-CXY/cxy-sdn/agent"
+	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
 )
 
@@ -76,17 +77,13 @@ func GetNetworks() ([]Network, error) {
 	return networks, nil
 }
 
-func CreateDefaultNetwork(isServer bool) (*Network, error) {
+func CreateDefaultNetwork() (*Network, error) {
 	subnet, err := GetAvailableSubnet()
 
 	if err != nil {
 		return &Network{}, err
 	}
-	if isServer {
-		return CreateNetwork(defaultNetwork, subnet)
-	} else {
-		return CreateNetwork2(defaultNetwork, subnet)
-	}
+	return CreateNetwork(defaultNetwork, subnet)
 }
 
 func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
@@ -94,7 +91,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 	if err == nil {
 		//already exist
-		fmt.Printf("Network %s already exist in store\n", name)
+		log.Printf("Network %s already exist in store\n", name)
 		return network, errors.New("Network already exist")
 	}
 
@@ -110,7 +107,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 	addr, err := util.GetIfaceAddr(name)
 
 	if err != nil {
-		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
+		log.Printf("Interface with name %s does not exist, Creating it\n", name)
 
 		gateway = RequestIP(fmt.Sprint(VNI), *subnet)
 
@@ -141,7 +138,7 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 		// let the ipam and I happy
 		RequestIP(fmt.Sprint(VNI), *subnet)
 
-		fmt.Printf("Interface %s already exists with IP %s, subnet %s, in %d vlan\n", name, ifaceAddr, subnet.String(), VNI)
+		log.Printf("Interface %s already exists with IP %s, subnet %s, in %d vlan\n", name, ifaceAddr, subnet.String(), VNI)
 
 		gateway, subnet, err = net.ParseCIDR(ifaceAddr)
 
@@ -175,12 +172,12 @@ func CreateNetwork(name string, subnet *net.IPNet) (*Network, error) {
 
 // this function is used to create network from network datastore
 // assume the network whose name is `name` is already exist but have no interface on the node
-func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
+/*func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 	network, err := GetNetwork(name)
 
 	if err != nil {
 		//not already exist
-		fmt.Printf("can't get %s in store, maybe communication err\n", name)
+		log.Printf("can't get %s in store, maybe communication err\n", name)
 		return network, errors.New("Network not exist")
 	}
 
@@ -189,7 +186,7 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 	addr, err := util.GetIfaceAddr(name)
 
 	if err != nil {
-		fmt.Printf("Interface with name %s does not exist, Creating it\n", name)
+		log.Printf("Interface with name %s does not exist, Creating it\n", name)
 
 		if err = AddInternalPort(ovsClient, bridgeName, name, network.VNI); err != nil {
 			return network, err
@@ -211,7 +208,7 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 		}
 
 	} else {
-		fmt.Printf("Interface %s already exists\n", name)
+		log.Printf("Interface %s already exists\n", name)
 		ifaceAddr := addr.String()
 
 		_, subnet, err = net.ParseCIDR(ifaceAddr)
@@ -228,7 +225,7 @@ func CreateNetwork2(name string, subnet *net.IPNet) (*Network, error) {
 
 	return network, nil
 
-}
+}*/
 
 func DeleteNetwork(name string) error {
 	network, err := GetNetwork(name)
@@ -249,14 +246,14 @@ func DeleteNetwork(name string) error {
 	return nil
 }
 
-// used for minion node to sync the network from network Store
+// used for client node to sync the network from network Store
 // ignore errors
 func syncNetwork(d *Daemon) {
 	//sync every 5 seconds
 	for {
 		networks, err := GetNetworks()
 		if err != nil {
-			fmt.Println("Error in getNetworks")
+			log.Println("Error in getNetworks")
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -268,34 +265,34 @@ func syncNetwork(d *Daemon) {
 			if err != nil {
 				// network not exsit create the interface from net store
 				if err = AddInternalPort(ovsClient, bridgeName, network.Name, network.VNI); err != nil {
-					fmt.Println("add internal port err in syncNetwork", network.Name)
+					log.Println("add internal port err in syncNetwork", network.Name)
 					continue
 				}
 				time.Sleep(1 * time.Second)
 
 				if err = util.SetMtu(network.Name, mtu); err != nil {
-					fmt.Println("set mtu err in syncNetwork", network.Name)
+					log.Println("set mtu err in syncNetwork", network.Name)
 					continue
 				}
 
 				_, subnet, _ := net.ParseCIDR(network.Subnet)
 				gatewayCIDR := &net.IPNet{net.ParseIP(network.Gateway), subnet.Mask}
 				if err = util.SetInterfaceIp(network.Name, gatewayCIDR.String()); err != nil {
-					fmt.Println("set ip err in syncNetwork", network.Name)
+					log.Println("set ip err in syncNetwork", network.Name)
 					continue
 				}
 
 				if err = util.InterfaceUp(network.Name); err != nil {
-					fmt.Println("interface up err in syncNetwork", network.Name)
+					log.Println("interface up err in syncNetwork", network.Name)
 					continue
 				}
 				d.Gateways[network.Name] = struct{}{}
 
 				if err = setupIPTables(network.Name, network.Subnet); err != nil {
-					fmt.Println("iptable setup err in syncNetwork", network.Name)
+					log.Println("iptable setup err in syncNetwork", network.Name)
 					continue
 				}
-				fmt.Println(network.Name + " network created")
+				log.Println(network.Name + " network created")
 			}
 		}
 
@@ -315,7 +312,7 @@ func syncNetwork(d *Daemon) {
 			if !found {
 				deletePort(ovsClient, bridgeName, k)
 				delete(d.Gateways, k)
-				fmt.Println("delete unused interface", k)
+				log.Println("delete unused interface", k)
 			}
 		}
 		time.Sleep(5 * time.Second)
@@ -437,7 +434,7 @@ func RequestIP(VNI string, subnet net.IPNet) net.IP {
 	err2 := binary.Read(buf, binary.BigEndian, &num)
 
 	if err2 != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil
 	}
 

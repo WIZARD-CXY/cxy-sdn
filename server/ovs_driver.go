@@ -3,10 +3,10 @@ package server
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
-	// "github.com/golang/glog"
 	"github.com/socketplane/libovsdb"
 )
 
@@ -90,8 +90,8 @@ func CreateOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName string) (string
 	mutateUuid := []libovsdb.UUID{libovsdb.UUID{namedBridgeUuid}}
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "insert", mutateSet)
-	/*	fmt.Println()
-		fmt.Println("+++++++++++++++", getRootUuid())*/
+	/*	log.Println()
+		log.Println("+++++++++++++++", getRootUuid())*/
 
 	condition := libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 
@@ -133,7 +133,7 @@ func DeleteOVSBridge(ovsClient *libovsdb.OvsdbClient, bridgeName, bridgeUuid str
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "delete", mutateSet)
 	// hacked Condition till we get Monitor / Select working
-	fmt.Println("++++++++++++++", getRootUuid())
+	log.Println("++++++++++++++", getRootUuid())
 	condition = libovsdb.NewCondition("_uuid", "==", libovsdb.UUID{getRootUuid()})
 
 	// simple mutate operation
@@ -215,13 +215,13 @@ func addVxlanPort(ovsClient *libovsdb.OvsdbClient, bridgeName string, portName s
 	operations := []libovsdb.Operation{insertIntfOp, insertPortOp, mutateOp}
 	reply, _ := ovsClient.Transact("Open_vSwitch", operations...)
 	if len(reply) < len(operations) {
-		fmt.Println("Number of Replies should be atleast equal to number of Operations")
+		log.Println("Number of Replies should be atleast equal to number of Operations")
 	}
 	for i, o := range reply {
 		if o.Error != "" && i < len(operations) {
-			fmt.Println("Transaction Failed due to an error :", o.Error, " details:", o.Details, " in ", operations[i])
+			log.Println("Transaction Failed due to an error :", o.Error, " details:", o.Details, " in ", operations[i])
 		} else if o.Error != "" {
-			fmt.Println("Transaction Failed due to an error :", o.Error)
+			log.Println("Transaction Failed due to an error :", o.Error)
 		}
 	}
 }
@@ -427,7 +427,7 @@ func ovs_connect() (*libovsdb.OvsdbClient, error) {
 	for {
 		ovsClient, err = libovsdb.Connect("", 0)
 		if err != nil {
-			fmt.Printf("Error(%s) connecting to OVS. Retrying...\n", err.Error())
+			log.Printf("Error(%s) connecting to OVS. Retrying...\n", err.Error())
 			time.Sleep(time.Second * 2)
 			continue
 		}
@@ -442,7 +442,7 @@ func ovs_connect() (*libovsdb.OvsdbClient, error) {
 	for getRootUuid() == "" {
 		time.Sleep(time.Second * 1)
 	}
-	fmt.Println("Connected to OVS...")
+	log.Println("Connected to OVS...")
 	return ovsClient, nil
 }
 

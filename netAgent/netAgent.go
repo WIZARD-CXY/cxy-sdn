@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -415,7 +416,7 @@ func register(wtype WatchType, params map[string]interface{}, handler watch.Hand
 	// Create the watch
 	wp, err := watch.Parse(params)
 	if err != nil {
-		fmt.Printf("Register error : %s", err)
+		log.Printf("Register error : %s", err)
 		return
 	}
 	addWatchPlan(wtype, wp)
@@ -424,7 +425,7 @@ func register(wtype WatchType, params map[string]interface{}, handler watch.Hand
 	httpAddr := command.HTTPAddrFlag(cmdFlags)
 	// Run the watch
 	if err := wp.Run(*httpAddr); err != nil {
-		fmt.Printf("Error querying Consul agent: %s", err)
+		log.Printf("Error querying Consul agent: %s", err)
 	}
 }
 
@@ -541,7 +542,7 @@ func registerForStoreUpdates(store string) {
 	params["type"] = "keyprefix"
 	params["prefix"] = store + "/"
 	handler := func(idx uint64, data interface{}) {
-		fmt.Println("NOT IMPLEMENTED Store Update :", idx, data)
+		log.Println("NOT IMPLEMENTED Store Update :", idx, data)
 	}
 	register(WATCH_TYPE_STORE, params, handler)
 }

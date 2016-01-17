@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -71,7 +71,9 @@ type Daemon struct {
 	clusterChan    chan *NodeCtx
 	connectionChan chan *ConnectionCtx
 	readyChan      chan bool
+	isReady        bool
 	Gateways       map[string]struct{} //network set
+	expServerNum   string
 }
 
 type NodeCtx struct {
@@ -85,7 +87,7 @@ const (
 )
 
 func NewDaemon() *Daemon {
-	return &Daemon{
+	daemon = &Daemon{
 		&BridgeConf{},
 		false,
 		NewSafeMap(),
@@ -93,15 +95,19 @@ func NewDaemon() *Daemon {
 		make(chan *NodeCtx),
 		make(chan *ConnectionCtx),
 		make(chan bool),
+		false,
 		make(map[string]struct{}, 50),
+		"1",
 	}
+	return daemon
 }
 func (d *Daemon) Run(ctx *cli.Context) {
 	d.isServer = ctx.Bool("server")
+	d.expServerNum = ctx.String("expectedServerNum")
 
 	// set up dir use for netns
 	if err := os.Mkdir("/var/run/netns", 0777); err != nil {
-		fmt.Println("mkdir /var/run/netns failed", err)
+		log.Println("mkdir /var/run/netns failed", err)
 	}
 
 	// start a goroutine to serve api
@@ -111,10 +117,10 @@ func (d *Daemon) Run(ctx *cli.Context) {
 	go func() {
 		d.bindInterface = ctx.String("iface")
 
-		fmt.Printf("Using interface %s\n", d.bindInterface)
+		log.Printf("Using interface %s\n", d.bindInterface)
 
-		if err := InitAgent(d.bindInterface, d.isServer, ctx.String("expectedServerNum")); err != nil {
-			fmt.Println("error in Init netAgent")
+		if err := InitAgent(d); err != nil {
+			log.Println("error in Init netAgent")
 		}
 	}()
 
@@ -123,17 +129,20 @@ func (d *Daemon) Run(ctx *cli.Context) {
 
 	go func() {
 		if _, err := CreateBridge(); err != nil {
-			fmt.Println("Err in create ovs bridge", err.Error())
+			log.Println("Err in create ovs bridge", err.Error())
 		}
 
 		//wait data store backend ready
 		<-d.readyChan
 		// wait 2 seconds for raft to elect a leader
 		time.Sleep(2 * time.Second)
-		fmt.Println("ready to work !")
+		log.Println("ready to work !")
+		if d.isServer {
+			//server agent create default network
+			if _, err := CreateDefaultNetwork(); err != nil {
+				log.Println("Create cxy network error", err.Error())
+			}
 
-		if _, err := CreateDefaultNetwork(d.isServer); err != nil {
-			fmt.Println("Create cxy network error", err.Error())
 		}
 
 		syncNetwork(d)
@@ -150,10 +159,10 @@ func (d *Daemon) Run(ctx *cli.Context) {
 		for _ = range sig_chan {
 			// TODO clean up work Delete ovs-br0
 			if err := DeleteBridge(); err != nil {
-				fmt.Println("error deleting ovs-br0", err)
+				log.Println("error deleting ovs-br0", err)
 			}
 
-			fmt.Println("Exit now")
+			log.Println("Exit now")
 			os.Exit(0)
 		}
 	}()

@@ -1,14 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"flag"
-	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
-	"github.com/golang/glog"
 	"os"
 	"os/signal"
+
+	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
+	"github.com/golang/glog"
 )
 
 const dataDir = "/tmp/test"
@@ -17,11 +18,11 @@ type Listener struct {
 }
 
 func (e Listener) NotifyNodeUpdate(Type netAgent.NotifyUpdateType, nodeName string) {
-	fmt.Println("Node update", Type, nodeName)
+	log.Println("Node update", Type, nodeName)
 }
 
 func (e Listener) NotifyKeyUpdate(Type netAgent.NotifyUpdateType, key string, value []byte) {
-	fmt.Println("Key update", Type, key, string(value))
+	log.Println("Key update", Type, key, string(value))
 }
 func (e Listener) NotifyStoreUpdate(Type netAgent.NotifyUpdateType, store string, data map[string][]byte) {
 

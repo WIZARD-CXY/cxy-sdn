@@ -3,11 +3,13 @@ package util
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"net"
 
-	"github.com/vishvananda/netlink"
 	"math"
+
+	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -24,7 +26,7 @@ func CheckRouteOverlaps(toCheck *net.IPNet) error {
 
 	for _, network := range networks {
 		if network.Dst != nil && NetworkOverlaps(toCheck, network.Dst) {
-			fmt.Println(toCheck, network.Dst)
+			log.Println(toCheck, network.Dst)
 			return ErrNetworkOverlaps
 		}
 	}

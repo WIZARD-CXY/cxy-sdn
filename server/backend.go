@@ -1,10 +1,10 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"os"
 
-	"github.com/WIZARD-CXY/cxy-sdn/agent"
+	"github.com/WIZARD-CXY/cxy-sdn/netAgent"
 	"github.com/WIZARD-CXY/cxy-sdn/util"
 )
 
@@ -14,10 +14,10 @@ type Listener struct{}
 
 var listener Listener
 
-func InitAgent(bindInterface string, isServer bool, expectServerNum string) error {
+func InitAgent(d *Daemon) error {
 	// advance setup server mode
 	// ref https://www.consul.io/docs/guides/bootstrapping.html
-	err := netAgent.StartAgent(isServer, expectServerNum, bindInterface, dataDir)
+	err := netAgent.StartAgent(d.isServer, d.expServerNum, d.bindInterface, dataDir)
 
 	if err == nil {
 		go netAgent.RegisterForNodeUpdates(listener)
@@ -49,30 +49,35 @@ func nodeHandler(d *Daemon) {
 		case nodeJoin:
 			ip := context.param
 			if err := join(ip); err != nil {
-				fmt.Println("Error joining the cluster")
+				log.Println("Error joining the cluster")
 			}
-			fmt.Println("join to cluster master", ip)
+			log.Println("join to cluster", ip)
 			// none-bootstrap node need connect to server leader before ready to work
-			d.readyChan <- true
 		case nodeLeave:
 			if err := leave(); err != nil {
-				fmt.Println("Error leaving the cluster")
+				log.Println("Error leaving the cluster")
 			}
 
 		}
 	}
 }
 
+var daemon *Daemon
+
 func (l Listener) NotifyNodeUpdate(nType netAgent.NotifyUpdateType, nodeAddr string) {
+	if !daemon.isReady {
+		daemon.isReady = true
+		daemon.readyChan <- true
+	}
 	if nType == netAgent.NOTIFY_UPDATE_ADD {
-		fmt.Println(nodeAddr, "node joined in")
+		log.Println(nodeAddr, "node joined in")
 		myIp, _ := util.MyIP()
 		if nodeAddr != myIp {
 			// add tunnel to the other node
 			AddPeer(nodeAddr)
 		}
 	} else if nType == netAgent.NOTIFY_UPDATE_DELETE {
-		fmt.Println(nodeAddr, "is leaving, removing tunnel")
+		log.Println(nodeAddr, "is leaving, removing tunnel")
 		// delete tunnel to nodeAddr
 		DeletePeer(nodeAddr)
 	}

@@ -7,6 +7,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -252,7 +253,7 @@ func joinCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 		return &HttpErr{http.StatusBadRequest, "address parameter not exist"}
 	}
 
-	fmt.Println("Join to cluster", addr[0])
+	log.Println("Join to cluster", addr[0])
 
 	d.clusterChan <- &NodeCtx{addr[0], nodeJoin}
 	return nil
@@ -260,7 +261,7 @@ func joinCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
 
 // node leave the cluster
 func leaveCluster(d *Daemon, w http.ResponseWriter, r *http.Request) *HttpErr {
-	fmt.Println("Node leave cluster")
+	log.Println("Node leave cluster")
 	d.clusterChan <- &NodeCtx{"", nodeLeave}
 
 	return nil
