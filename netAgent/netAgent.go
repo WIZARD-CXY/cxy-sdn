@@ -114,9 +114,7 @@ func Join(addr string) error {
 	args := []string{"join"}
 	ips := strings.Split(addr, " ")
 
-	for _, ip := range ips {
-		args = append(args, ip)
-	}
+	args = append(args, ips...)
 
 	ret := Execute(args...)
 

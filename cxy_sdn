@@ -16,7 +16,7 @@ NAME:
     cxy_sdn - Install, Configure and Run cxy-sdn
 
 VERSION:
-    1.0
+    10.0
 
 USAGE:
     $0 <options> <command> [command_options] [arguments...]
