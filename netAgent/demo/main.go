@@ -34,7 +34,7 @@ func main() {
 	serverAddr := flag.String("sa", "10.10.105.2", "server addr")
 
 	flag.Parse()
-	err := netAgent.StartAgent(*isServerMode, *isBootstrap, *netInterface, dataDir)
+	err := netAgent.StartAgent(*isServerMode, "1", *netInterface, dataDir)
 
 	if !*isBootstrap {
 		netAgent.Join(*serverAddr)
