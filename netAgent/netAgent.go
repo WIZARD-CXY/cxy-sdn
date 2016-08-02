@@ -214,11 +214,12 @@ func GetAll(store string) ([][]byte, []int, bool) {
 	url := CONSUL_KV_BASE_URL + store + "?recurse"
 
 	resp, err := http.Get(url)
-	defer resp.Body.Close()
 
 	if err != nil {
 		glog.Infof("Error in Get all KV %v", store)
+		return nil, nil, false
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		var jsonBody []KVRespBody
