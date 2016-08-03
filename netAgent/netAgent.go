@@ -170,8 +170,8 @@ type KVRespBody struct {
 	CreateIndex int    `json:"CreateIndex,omitempty"`
 	ModifyIndex int    `json:"ModifyIndex,omitempty"`
 	Key         string `json:"Key,omitempty"`
-	Flags       int    `json:Flags,omitempty"`
-	Value       string `json:Value,omitempty"`
+	Flags       int    `json:"Flags,omitempty"`
+	Value       string `json:"Value,omitempty"`
 }
 
 // 1st return value as []byte
@@ -204,9 +204,9 @@ func Get(store string, key string) ([]byte, int, bool) {
 
 		return existingValue, jsonBody[0].ModifyIndex, true
 
-	} else {
-		return nil, 0, false
 	}
+	return nil, 0, false
+
 }
 
 // get all key-value pairs in one store from backend
@@ -236,9 +236,8 @@ func GetAll(store string) ([][]byte, []int, bool) {
 		}
 
 		return values, indexes, true
-	} else {
-		return nil, nil, false
 	}
+	return nil, nil, false
 
 }
 
@@ -295,7 +294,7 @@ func Delete(store string, key string) int {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		glog.Errorf("Error deleting KV pair %d", key)
+		glog.Errorf("Error deleting KV pair %s", key)
 		return ERROR
 	}
 
